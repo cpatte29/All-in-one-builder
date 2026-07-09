@@ -7,3 +7,12 @@ export { runClaudeBuildLoop } from "./claudeBuild";
 export { runQualityReviewLoop } from "./qualityReview";
 export { runClientUpdateLoop } from "./clientUpdate";
 export { loopLabel } from "./engine";
+
+// Sales Mode
+export { runLeadCaptureLoop, getLead } from "./leadCapture";
+export { runBusinessPainLoop } from "./businessPain";
+export { runOfferMatchLoop } from "./offerMatch";
+export { runProposalGenerationLoop } from "./proposalGeneration";
+export { runFollowUpEmailLoop } from "./followUpEmail";
+export { runCloseProbabilityLoop } from "./closeProbability";
+export { convertLeadToClient } from "./leadConvert";

@@ -14,28 +14,49 @@ function logActivity(entityType: string, entityId: string, action: string, messa
   ).run(newId("act"), entityType, entityId, action, message);
 }
 
+function logSalesActivity(entityType: string, entityId: string, action: string, message: string) {
+  db.prepare(
+    `INSERT INTO sales_activity (id, entity_type, entity_id, action, message) VALUES (?, ?, ?, ?, ?)`
+  ).run(newId("sact"), entityType, entityId, action, message);
+}
+
 function logLoop(
   loopType: string,
-  ids: { clientId?: string; projectId?: string; taskId?: string },
+  ids: { clientId?: string; projectId?: string; taskId?: string; leadId?: string; proposalId?: string },
   input: unknown,
   output: unknown
 ) {
   db.prepare(
-    `INSERT INTO loops (id, loop_type, client_id, project_id, task_id, status, input_json, output_json)
-     VALUES (?, ?, ?, ?, ?, 'completed', ?, ?)`
+    `INSERT INTO loops (id, loop_type, client_id, project_id, task_id, lead_id, proposal_id, status, input_json, output_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`
   ).run(
     newId("loop"),
     loopType,
     ids.clientId ?? null,
     ids.projectId ?? null,
     ids.taskId ?? null,
+    ids.leadId ?? null,
+    ids.proposalId ?? null,
     JSON.stringify(input),
     JSON.stringify(output)
   );
 }
 
 function clearAll() {
-  const tables = ["activity_log", "loops", "notes", "tasks", "projects", "clients", "packages"];
+  const tables = [
+    "sales_activity",
+    "follow_ups",
+    "proposals",
+    "conversations",
+    "leads",
+    "activity_log",
+    "loops",
+    "notes",
+    "tasks",
+    "projects",
+    "clients",
+    "packages",
+  ];
   for (const t of tables) db.prepare(`DELETE FROM ${t}`).run();
 }
 
@@ -188,11 +209,142 @@ function seedFreshClient() {
   console.log(`Seeded fresh (profiled-only) client: ${businessName}`);
 }
 
+function seedHotLead() {
+  const leadId = newId("lead");
+  const businessName = "Bluepeak HVAC Services";
+  db.prepare(
+    `INSERT INTO leads
+      (id, business_name, contact_name, email, phone, business_type, pain_points, requested_service,
+       budget_range, urgency, source, notes, status, diagnosis_json, offer_match_json,
+       close_probability, close_probability_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'high', 'in_person', ?, 'proposal_sent', ?, ?, ?, ?, ?, ?)`
+  ).run(
+    leadId,
+    businessName,
+    "Marcus Webb",
+    "marcus@bluepeakhvac.com",
+    "(555) 410-2287",
+    "HVAC contractor",
+    "Losing leads after hours, manual scheduling, no way to follow up fast enough.",
+    "New website plus automated lead follow-up",
+    "$9,000 - $18,000",
+    "Met Marcus at the chamber of commerce mixer — ready to move fast, wants something live before peak season.",
+    JSON.stringify({
+      industry: "Home Services",
+      businessType: "HVAC contractor",
+      opportunityScore: 75,
+      painScore: 80,
+      painPoints: ["Lead capture / follow-up gaps", "Scheduling / booking friction", "Losing business to competitors"],
+      recommendedFocus: ["Website foundation", "Lead + follow-up automation", "Internal operations tooling"],
+    }),
+    JSON.stringify({
+      packageId: "pkg_pro_ai_ops",
+      packageName: "Pro AI Ops Package",
+      fitScore: 77,
+      rationale: 'Opportunity score 75/100 and pain score 80/100 (fit 77/100) point to the "pro" tier — Pro AI Ops Package.',
+    }),
+    82,
+    JSON.stringify({
+      score: 82,
+      breakdown: { urgency: 25, budget: 20, fit: 15, responsiveness: 12, painLevel: 10 },
+      summary: "Hot lead — high urgency, strong fit, and active engagement.",
+    }),
+    nowIso(),
+    nowIso()
+  );
+
+  logSalesActivity("lead", leadId, "lead_captured", `Lead "${businessName}" captured via in person.`);
+  logLoop("lead_capture", { leadId }, { businessName }, { leadId });
+  logSalesActivity("lead", leadId, "diagnosed", `Diagnosed as Home Services — pain score 80/100, opportunity score 75/100.`);
+  logLoop("business_pain", { leadId }, { leadId }, { opportunityScore: 75, painScore: 80 });
+  logSalesActivity("lead", leadId, "offer_matched", "Matched to Pro AI Ops Package (fit 77/100).");
+  logLoop("offer_match", { leadId }, { leadId }, { packageId: "pkg_pro_ai_ops", fitScore: 77 });
+
+  const proposalId = newId("prop");
+  const pkg = PACKAGE_CATALOG.find((p) => p.id === "pkg_pro_ai_ops")!;
+  const scope = { deliverables: pkg.deliverables, focusAreas: ["Website foundation", "Lead + follow-up automation"] };
+  const nextStep = "Schedule a same-week call with Marcus Webb to walk through the proposal and confirm scope.";
+  db.prepare(
+    `INSERT INTO proposals (id, lead_id, package_name, scope_json, price_range, timeline_weeks, deliverables_json, next_step, status, sent_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'sent', ?, ?, ?)`
+  ).run(
+    proposalId,
+    leadId,
+    pkg.name,
+    JSON.stringify(scope),
+    pkg.price_range,
+    pkg.timeline_weeks,
+    JSON.stringify(pkg.deliverables),
+    nextStep,
+    nowIso(),
+    nowIso(),
+    nowIso()
+  );
+  logSalesActivity("proposal", proposalId, "proposal_drafted", `Drafted proposal for ${businessName}: ${pkg.name}, ${pkg.price_range}, ${pkg.timeline_weeks} weeks.`);
+  logLoop("proposal_generation", { leadId, proposalId }, { leadId }, { proposalId, packageName: pkg.name });
+  logSalesActivity("proposal", proposalId, "proposal_sent", `Proposal "${pkg.name}" sent.`);
+
+  const conv1 = newId("conv");
+  db.prepare(
+    `INSERT INTO conversations (id, lead_id, channel, summary, occurred_at, created_at) VALUES (?, ?, 'in_person', ?, ?, ?)`
+  ).run(conv1, leadId, "Met at chamber of commerce mixer — described missed after-hours calls costing real jobs.", nowIso(), nowIso());
+  const conv2 = newId("conv");
+  db.prepare(
+    `INSERT INTO conversations (id, lead_id, channel, summary, occurred_at, created_at) VALUES (?, ?, 'call', ?, ?, ?)`
+  ).run(conv2, leadId, "Follow-up call — confirmed budget and urgency, wants to move before peak season.", nowIso(), nowIso());
+  logSalesActivity("lead", leadId, "conversation_logged", "Logged an in person conversation.");
+  logSalesActivity("lead", leadId, "conversation_logged", "Logged a call conversation.");
+
+  const followUpId = newId("fu");
+  const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const subject = `Following up on your ${businessName} proposal`;
+  const body = `Hi Marcus,\n\nWanted to follow up on the proposal we put together for ${businessName} (${pkg.name}, ${pkg.price_range}, ${pkg.timeline_weeks} weeks). Happy to walk through any part of it or answer questions.\n\n${nextStep}\n\nBest,\nFABLE 5 Team`;
+  db.prepare(
+    `INSERT INTO follow_ups (id, lead_id, proposal_id, channel, due_at, status, email_subject, email_body, created_at, updated_at)
+     VALUES (?, ?, ?, 'email', ?, 'pending', ?, ?, ?, ?)`
+  ).run(followUpId, leadId, proposalId, dueAt, subject, body, nowIso(), nowIso());
+  logSalesActivity("lead", leadId, "follow_up_drafted", `Follow-up email drafted, due ${new Date(dueAt).toLocaleDateString()}.`);
+  logLoop("follow_up_email", { leadId, proposalId }, { leadId }, { followUpId, dueAt });
+  logLoop("close_probability", { leadId }, { leadId }, { score: 82 });
+  logSalesActivity("lead", leadId, "close_probability_scored", "Close probability: 82/100 — Hot lead — high urgency, strong fit, and active engagement.");
+
+  console.log(`Seeded hot lead: ${businessName} (proposal sent, follow-up due)`);
+}
+
+function seedFreshLead() {
+  const leadId = newId("lead");
+  const businessName = "Cedar & Co Boutique";
+  db.prepare(
+    `INSERT INTO leads
+      (id, business_name, contact_name, email, phone, business_type, pain_points, requested_service,
+       budget_range, urgency, source, notes, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'low', 'referral', ?, 'new', ?, ?)`
+  ).run(
+    leadId,
+    businessName,
+    "Priya Anand",
+    "priya@cedarandco.com",
+    "(555) 662-9034",
+    "Boutique retail",
+    "Relies on Instagram only, no real storefront online.",
+    "Simple e-commerce presence",
+    "$1,500 - $3,000",
+    "Referred by Riverside Family Dental — casual interest, not in a rush.",
+    nowIso(),
+    nowIso()
+  );
+  logSalesActivity("lead", leadId, "lead_captured", `Lead "${businessName}" captured via referral.`);
+  logLoop("lead_capture", { leadId }, { businessName }, { leadId });
+  console.log(`Seeded fresh lead: ${businessName}`);
+}
+
 function main() {
   clearAll();
   seedPackages();
   seedFullyDeliveredClient();
   seedFreshClient();
+  seedHotLead();
+  seedFreshLead();
   console.log("Seed complete.");
 }
 

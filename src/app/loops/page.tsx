@@ -6,7 +6,7 @@ import { loopLabel } from "@/lib/loops";
 
 export const dynamic = "force-dynamic";
 
-const LOOP_ORDER: LoopType[] = [
+const OPS_LOOP_ORDER: LoopType[] = [
   "client_profile",
   "business_diagnosis",
   "package_recommendation",
@@ -15,6 +15,15 @@ const LOOP_ORDER: LoopType[] = [
   "claude_build",
   "quality_review",
   "client_update",
+];
+
+const SALES_LOOP_ORDER: LoopType[] = [
+  "lead_capture",
+  "business_pain",
+  "offer_match",
+  "proposal_generation",
+  "follow_up_email",
+  "close_probability",
 ];
 
 const LOOP_DESCRIPTIONS: Record<LoopType, string> = {
@@ -26,10 +35,35 @@ const LOOP_DESCRIPTIONS: Record<LoopType, string> = {
   claude_build: "Task → structured build brief for an AI developer.",
   quality_review: "Records pass/fail review, advances or reverts task status.",
   client_update: "Rolls task progress into a client-facing status note.",
+  lead_capture: "In-person/email/referral/cold-outreach notes → structured lead record.",
+  business_pain: "Diagnoses the lead's business and scores how much pain they're in.",
+  offer_match: "Diagnosis → best-fit service package from the catalog.",
+  proposal_generation: "Matched offer → structured proposal (package, scope, price, timeline, next step).",
+  follow_up_email: "Lead status → ready-to-send follow-up email, scheduled by urgency.",
+  close_probability: "Scores 0-100 from urgency, budget, fit, responsiveness, and pain level.",
 };
 
+function LoopGrid({ types, countMap }: { types: LoopType[]; countMap: Record<string, number> }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {types.map((type, i) => (
+        <div key={type} className="card flex items-start gap-3">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/15 text-xs font-semibold text-brand-300">
+            {i + 1}
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-ink-100">{loopLabel(type)}</div>
+            <div className="text-xs text-ink-500">{LOOP_DESCRIPTIONS[type]}</div>
+            <div className="mt-1 text-xs text-ink-400">Runs: {countMap[type] ?? 0}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function LoopsPage() {
-  const loops = db.prepare("SELECT * FROM loops ORDER BY created_at DESC LIMIT 100").all() as LoopRun[];
+  const loops = db.prepare("SELECT * FROM loops ORDER BY created_at DESC LIMIT 150").all() as LoopRun[];
   const counts = db
     .prepare("SELECT loop_type, COUNT(*) as n FROM loops GROUP BY loop_type")
     .all() as { loop_type: LoopType; n: number }[];
@@ -37,21 +71,20 @@ export default function LoopsPage() {
 
   return (
     <div>
-      <Topbar title="Loops" subtitle="The 8 build loops that move a lead from intake to delivery." />
-      <div className="space-y-6 p-8">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {LOOP_ORDER.map((type, i) => (
-            <div key={type} className="card flex items-start gap-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/15 text-xs font-semibold text-brand-300">
-                {i + 1}
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-ink-100">{loopLabel(type)}</div>
-                <div className="text-xs text-ink-500">{LOOP_DESCRIPTIONS[type]}</div>
-                <div className="mt-1 text-xs text-ink-400">Runs: {countMap[type] ?? 0}</div>
-              </div>
-            </div>
-          ))}
+      <Topbar title="Loops" subtitle="The 14 loops that move a lead from first contact to delivered client." />
+      <div className="space-y-8 p-8">
+        <div>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+            Operations (client → delivery)
+          </h2>
+          <LoopGrid types={OPS_LOOP_ORDER} countMap={countMap} />
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+            Sales (lead → client)
+          </h2>
+          <LoopGrid types={SALES_LOOP_ORDER} countMap={countMap} />
         </div>
 
         <div className="card">
@@ -70,7 +103,15 @@ export default function LoopsPage() {
                 <tr key={l.id} className="border-b border-ink-800 last:border-0">
                   <td className="px-2 py-2 text-ink-200">{loopLabel(l.loop_type)}</td>
                   <td className="px-2 py-2 text-ink-500">
-                    {l.task_id ? "task" : l.project_id ? "project" : "client"}: {l.task_id || l.project_id || l.client_id}
+                    {l.task_id
+                      ? `task: ${l.task_id}`
+                      : l.project_id
+                        ? `project: ${l.project_id}`
+                        : l.proposal_id
+                          ? `proposal: ${l.proposal_id}`
+                          : l.lead_id
+                            ? `lead: ${l.lead_id}`
+                            : `client: ${l.client_id}`}
                   </td>
                   <td className="px-2 py-2">
                     <StatusBadge status={l.status} />

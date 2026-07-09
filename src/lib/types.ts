@@ -33,7 +33,13 @@ export type LoopType =
   | "task_generation"
   | "claude_build"
   | "quality_review"
-  | "client_update";
+  | "client_update"
+  | "lead_capture"
+  | "business_pain"
+  | "offer_match"
+  | "proposal_generation"
+  | "follow_up_email"
+  | "close_probability";
 
 export interface Client {
   id: string;
@@ -101,6 +107,8 @@ export interface LoopRun {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  lead_id: string | null;
+  proposal_id: string | null;
   status: "completed" | "failed";
   input_json: string | null;
   output_json: string | null;
@@ -118,6 +126,99 @@ export interface Note {
 }
 
 export interface ActivityLogEntry {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  message: string;
+  created_at: string;
+}
+
+// --- Sales Mode ----------------------------------------------------------
+
+export type LeadStatus =
+  | "new"
+  | "diagnosed"
+  | "matched"
+  | "proposal_ready"
+  | "proposal_sent"
+  | "negotiating"
+  | "won"
+  | "lost";
+
+export type LeadUrgency = "low" | "medium" | "high";
+
+export type LeadSource = "referral" | "cold_outreach" | "in_person" | "email_reply" | "website" | "other";
+
+export type ConversationChannel = "in_person" | "email" | "call" | "referral" | "other";
+
+export type ProposalStatus = "draft" | "sent" | "accepted" | "declined";
+
+export type FollowUpStatus = "pending" | "sent" | "done" | "skipped";
+
+export type FollowUpChannel = "email" | "call" | "text";
+
+export interface Lead {
+  id: string;
+  business_name: string;
+  contact_name: string;
+  email: string | null;
+  phone: string | null;
+  business_type: string | null;
+  pain_points: string | null;
+  requested_service: string | null;
+  budget_range: string | null;
+  urgency: LeadUrgency;
+  source: LeadSource;
+  notes: string | null;
+  status: LeadStatus;
+  diagnosis_json: string | null;
+  offer_match_json: string | null;
+  close_probability: number | null;
+  close_probability_json: string | null;
+  client_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  lead_id: string;
+  channel: ConversationChannel;
+  summary: string;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface Proposal {
+  id: string;
+  lead_id: string;
+  package_name: string;
+  scope_json: string | null;
+  price_range: string | null;
+  timeline_weeks: number | null;
+  deliverables_json: string | null;
+  next_step: string | null;
+  status: ProposalStatus;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FollowUp {
+  id: string;
+  lead_id: string;
+  proposal_id: string | null;
+  channel: FollowUpChannel;
+  due_at: string;
+  status: FollowUpStatus;
+  email_subject: string | null;
+  email_body: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesActivityEntry {
   id: string;
   entity_type: string;
   entity_id: string;

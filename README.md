@@ -1,10 +1,17 @@
 # FABLE 5 — Internal Operations System
 
 FABLE 5 is the internal ops dashboard for the agency. It is **not a chatbot** —
-it's an operations system. You enter a lead, and the loop engine walks it
-through classification, package recommendation, scoping, task generation, and
-build/review/update cycles, writing structured output to the database at every
-step and logging everything to the activity log.
+it's an operations system, made of two connected modes:
+
+- **Sales Mode** captures leads from in-person conversations, email replies,
+  referrals, and cold outreach, then carries them through diagnosis, offer
+  matching, proposal generation, and follow-up.
+- **Operations Mode** takes a client (either entered directly or converted
+  from a won lead) through classification, package recommendation, scoping,
+  task generation, and build/review/update cycles.
+
+Both modes run on the same loop engine: structured input in, structured
+output saved to the database, status updated, activity logged.
 
 ## Tech Stack
 
@@ -20,38 +27,53 @@ step and logging everything to the activity log.
 ```
 .
 ├── db/
-│   ├── schema.sql          # full relational schema (clients, projects, tasks, loops, ...)
-│   ├── seed.ts              # sample seed data (2 clients, projects, tasks, loop runs)
+│   ├── schema.sql          # full relational schema (clients, projects, tasks, loops, leads, ...)
+│   ├── seed.ts              # sample seed data (clients, a hot lead, a fresh lead, loop runs)
 │   └── fable5.db            # generated SQLite file (gitignored)
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx        # shell: sidebar + topbar
-│   │   ├── page.tsx           # 1. Dashboard
+│   │   ├── page.tsx           # 1. Dashboard (ops + sales stat cards)
 │   │   ├── clients/
 │   │   │   ├── page.tsx        # 2. Clients (list)
 │   │   │   ├── new/page.tsx     # 3. New Client Intake
 │   │   │   └── [id]/page.tsx    # 4. Client Detail (loops, tasks, notes, activity)
-│   │   ├── projects/page.tsx  # 5. Projects
+│   │   ├── projects/page.tsx  # 5. Projects (+ [id] Project Detail)
 │   │   ├── tasks/page.tsx     # 6. Tasks
-│   │   ├── loops/page.tsx     # 7. Loops (loop run history + manual trigger)
+│   │   ├── loops/page.tsx     # 7. Loops (all 14 loops, run history)
 │   │   ├── settings/page.tsx  # 8. Settings (packages, loop config)
+│   │   ├── leads/
+│   │   │   ├── page.tsx        # Sales 1. Leads (list)
+│   │   │   ├── new/page.tsx     # Sales 2. New Lead
+│   │   │   └── [id]/page.tsx    # Sales 3. Lead Detail (loops, conversations, proposals, follow-ups)
+│   │   ├── proposals/
+│   │   │   ├── page.tsx        # Sales 4. Proposals (list)
+│   │   │   └── [id]/page.tsx    # Sales 5. Proposal Detail
+│   │   ├── follow-ups/page.tsx # Sales 6. Follow-Ups (due / upcoming / resolved)
 │   │   └── api/                # route handlers backing every page (REST-ish JSON API)
-│   ├── components/            # Sidebar, Topbar, StatCard, StatusBadge, tables, forms
+│   ├── components/            # Sidebar, Topbar, StatCard, StatusBadge, forms, LoopActionButton
 │   └── lib/
-│       ├── db.ts               # SQLite connection + schema bootstrap
+│       ├── db.ts               # SQLite connection + schema bootstrap + column migrations
 │       ├── types.ts            # shared TypeScript types
 │       ├── packages.ts         # service package catalog
 │       ├── classify.ts         # business classification heuristics
-│       └── loops/              # the 8 loops — the actual "product"
-│           ├── engine.ts          # shared runLoop() harness: input -> output -> DB -> status -> activity log
-│           ├── clientProfile.ts
-│           ├── businessDiagnosis.ts
+│       └── loops/              # the 14 loops — the actual "product"
+│           ├── engine.ts          # shared executeLoop/executeSalesLoop harness: input -> output -> DB -> status -> activity log
+│           ├── clientProfile.ts    ┐
+│           ├── businessDiagnosis.ts│
 │           ├── packageRecommendation.ts
-│           ├── projectScope.ts
-│           ├── taskGeneration.ts
-│           ├── claudeBuild.ts
-│           ├── qualityReview.ts
-│           └── clientUpdate.ts
+│           ├── projectScope.ts     │ Operations Mode (8)
+│           ├── taskGeneration.ts   │
+│           ├── claudeBuild.ts      │
+│           ├── qualityReview.ts    │
+│           ├── clientUpdate.ts    ┘
+│           ├── leadCapture.ts      ┐
+│           ├── businessPain.ts     │
+│           ├── offerMatch.ts       │ Sales Mode (6)
+│           ├── proposalGeneration.ts│
+│           ├── followUpEmail.ts    │
+│           ├── closeProbability.ts┘
+│           └── leadConvert.ts     # lead → client (status transition, not a generative loop)
 ├── package.json
 ├── tailwind.config.ts
 ├── tsconfig.json
@@ -81,6 +103,8 @@ not a chat window. Every loop:
 4. **Updates** the client and/or project `status` field
 5. **Logs** an `activity_log` row describing what happened
 
+### Operations Mode
+
 | # | Loop | Input | Output | Side effects |
 |---|------|-------|--------|---------------|
 | 1 | Client Profile Loop | intake form fields | normalized client profile | creates/updates `clients` row, status → `profiled` |
@@ -92,13 +116,37 @@ not a chat window. Every loop:
 | 7 | Quality Review Loop | taskId | pass/fail + review notes | updates task status → `done`/`needs_revision` |
 | 8 | Client Update Loop | projectId | client-facing status summary | writes `notes` row, client status → `in_progress`/`delivered` |
 
+### Sales Mode
+
+| # | Loop | Input | Output | Side effects |
+|---|------|-------|--------|---------------|
+| 1 | Lead Capture Loop | raw lead fields (business, contact, pain, service, budget, urgency, source, notes) | normalized lead | creates `leads` row, status → `new` |
+| 2 | Business Pain Loop | leadId | industry, opportunity score, pain score, pain points | writes diagnosis, status → `diagnosed` |
+| 3 | Offer Match Loop | leadId | matched package + fit score + rationale | writes `leads.offer_match_json`, status → `matched` |
+| 4 | Proposal Generation Loop | leadId | proposal: package, scope, price range, timeline, deliverables, next step | creates `proposals` row (draft), status → `proposal_ready` |
+| 5 | Follow-Up Email Loop | leadId | ready-to-send subject + body, due date | creates `follow_ups` row, due date set by urgency |
+| 6 | Close Probability Loop | leadId | score 0-100 from urgency, budget, fit, responsiveness, pain level | writes `leads.close_probability` + breakdown |
+
+A lead becomes a client via **Convert to Client** (a status transition, not a
+generative loop): it creates the `clients` row from the lead's captured data
+and links `leads.client_id`, so the client can then run the full Operations
+Mode pipeline. Sending a proposal or marking a lead negotiating/lost are
+likewise plain status actions, not loops — they don't produce new structured
+output.
+
 Every loop run is itself persisted as a row in `loops` (type, input_json,
-output_json, status, timestamps) so the Loops page shows a full audit trail.
+output_json, status, timestamps) so the Loops page shows a full audit trail
+across both modes. Ops loops log to `activity_log`; sales loops log to the
+separate `sales_activity` feed so the CEO's sales timeline doesn't mix with
+build/delivery activity.
 
 ## Database Schema
 
-See `db/schema.sql`. Tables: `clients`, `projects`, `tasks`, `loops`,
-`packages`, `notes`, `activity_log`.
+See `db/schema.sql`. Operations tables: `clients`, `projects`, `tasks`,
+`packages`, `notes`, `activity_log`. Sales tables: `leads`, `conversations`,
+`proposals`, `follow_ups`, `sales_activity`. Both share the `loops` table
+(with `lead_id`/`proposal_id` columns alongside `client_id`/`project_id`/`task_id`)
+for a unified audit trail.
 
 ## Roadmap to Supabase
 

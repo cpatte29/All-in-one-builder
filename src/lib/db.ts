@@ -10,6 +10,17 @@ declare global {
   var __fable5db: Database.Database | undefined;
 }
 
+/** Adds columns introduced after a table's first release to already-created local DB files. */
+function migrateColumns(db: Database.Database, table: string, columns: string[]) {
+  const existing = new Set(
+    (db.pragma(`table_info(${table})`) as { name: string }[]).map((c) => c.name)
+  );
+  for (const col of columns) {
+    const [name, def] = col.split(/\s+(.+)/);
+    if (!existing.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${def}`);
+  }
+}
+
 function bootstrap(): Database.Database {
   fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
   const db = new Database(DB_FILE);
@@ -17,6 +28,7 @@ function bootstrap(): Database.Database {
   db.pragma("foreign_keys = ON");
   const schema = fs.readFileSync(SCHEMA_FILE, "utf-8");
   db.exec(schema);
+  migrateColumns(db, "loops", ["lead_id TEXT REFERENCES leads(id)", "proposal_id TEXT REFERENCES proposals(id)"]);
   return db;
 }
 

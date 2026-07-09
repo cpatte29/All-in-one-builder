@@ -14,6 +14,19 @@ const COLORS: Record<string, string> = {
   backlog: "bg-ink-700 text-ink-300",
   delivered: "bg-emerald-500/15 text-emerald-300",
   done: "bg-emerald-500/15 text-emerald-300",
+  // Sales Mode
+  matched: "bg-violet-500/15 text-violet-300",
+  proposal_ready: "bg-amber-500/15 text-amber-300",
+  proposal_sent: "bg-amber-500/15 text-amber-300",
+  negotiating: "bg-fuchsia-500/15 text-fuchsia-300",
+  won: "bg-emerald-500/15 text-emerald-300",
+  lost: "bg-rose-500/15 text-rose-300",
+  draft: "bg-ink-700 text-ink-300",
+  sent: "bg-amber-500/15 text-amber-300",
+  accepted: "bg-emerald-500/15 text-emerald-300",
+  declined: "bg-rose-500/15 text-rose-300",
+  pending: "bg-ink-700 text-ink-300",
+  skipped: "bg-ink-700 text-ink-400",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
