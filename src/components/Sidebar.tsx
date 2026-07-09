@@ -18,6 +18,7 @@ const SECTIONS = [
   {
     label: "Sales",
     items: [
+      { href: "/field", label: "Field Mode", icon: "⚡", exact: true },
       { href: "/leads", label: "Leads", icon: "●" },
       { href: "/leads/new", label: "New Lead", icon: "+" },
       { href: "/proposals", label: "Proposals", icon: "▣" },

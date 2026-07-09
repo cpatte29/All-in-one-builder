@@ -5,7 +5,10 @@ it's an operations system, made of two connected modes:
 
 - **Sales Mode** captures leads from in-person conversations, email replies,
   referrals, and cold outreach, then carries them through diagnosis, offer
-  matching, proposal generation, and follow-up.
+  matching, proposal generation, and follow-up. **CEO Field Mode**
+  (`/field`) is the fast path into it: one mobile-friendly form captures a
+  conversation and chains all 6 sales loops in a single tap, next to a
+  New/Warm/Hot/Proposal Sent/Won/Lost board and a Today's Follow-Ups view.
 - **Operations Mode** takes a client (either entered directly or converted
   from a won lead) through classification, package recommendation, scoping,
   task generation, and build/review/update cycles.
@@ -50,13 +53,17 @@ output saved to the database, status updated, activity logged.
 │   │   │   ├── page.tsx        # Sales 4. Proposals (list)
 │   │   │   └── [id]/page.tsx    # Sales 5. Proposal Detail
 │   │   ├── follow-ups/page.tsx # Sales 6. Follow-Ups (due / upcoming / resolved)
+│   │   ├── field/page.tsx     # CEO Field Mode: Quick Capture + pipeline board + Today's Follow-Ups
 │   │   └── api/                # route handlers backing every page (REST-ish JSON API)
+│   │       └── field/capture/route.ts  # chains all 6 sales loops from one Quick Capture submit
 │   ├── components/            # Sidebar, Topbar, StatCard, StatusBadge, forms, LoopActionButton
+│   │   └── QuickCaptureForm.tsx  # mobile-friendly intake + "Run Sales Loops" + results panel
 │   └── lib/
 │       ├── db.ts               # SQLite connection + schema bootstrap + column migrations
 │       ├── types.ts            # shared TypeScript types
 │       ├── packages.ts         # service package catalog
 │       ├── classify.ts         # business classification heuristics
+│       ├── leadBoard.ts        # New/Warm/Hot/Proposal Sent/Won/Lost bucketing for the field board
 │       └── loops/              # the 14 loops — the actual "product"
 │           ├── engine.ts          # shared executeLoop/executeSalesLoop harness: input -> output -> DB -> status -> activity log
 │           ├── clientProfile.ts    ┐
@@ -133,6 +140,23 @@ and links `leads.client_id`, so the client can then run the full Operations
 Mode pipeline. Sending a proposal or marking a lead negotiating/lost are
 likewise plain status actions, not loops — they don't produce new structured
 output.
+
+### CEO Field Mode
+
+`/field` is a single mobile-friendly page for capturing a conversation the
+moment it happens. The CEO fills in only 8 fields (business name, business
+type, contact, what they said, what they want, budget if known, urgency,
+notes) and taps **Run Sales Loops**. `POST /api/field/capture` then runs all
+6 Sales Mode loops in order — Lead Capture → Business Pain → Offer Match →
+Proposal Generation → Follow-Up Email → Close Probability — in a single
+request, and the page renders the pain summary, offer match, proposal draft,
+ready-to-send follow-up email, close-probability score, and an
+auto-generated next step (the proposal's next step, escalated to "prioritize
+immediate outreach" when the close probability is ≥ 70). The same page also
+shows a simplified **New / Warm / Hot / Proposal Sent / Won / Lost** board
+(`src/lib/leadBoard.ts` buckets the full lead status + close-probability
+model down to these 6 columns) and a **Today's Follow-Ups** view of anything
+due or overdue.
 
 Every loop run is itself persisted as a row in `loops` (type, input_json,
 output_json, status, timestamps) so the Loops page shows a full audit trail
