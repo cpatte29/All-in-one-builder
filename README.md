@@ -16,6 +16,12 @@ it's an operations system, made of two connected modes:
 Both modes run on the same loop engine: structured input in, structured
 output saved to the database, status updated, activity logged.
 
+Above both sits **Overseer Mode** (`/overseer`) — a read-only intelligence
+layer that watches the whole platform and reports on it. It belongs to the
+Overseer alone: it never generates code, never runs a sales or ops loop, and
+never touches client/project/task/lead/proposal data. It only observes,
+scores, and recommends.
+
 ## Tech Stack
 
 - **Next.js 14** (App Router) + **TypeScript**
@@ -54,16 +60,25 @@ output saved to the database, status updated, activity logged.
 │   │   │   └── [id]/page.tsx    # Sales 5. Proposal Detail
 │   │   ├── follow-ups/page.tsx # Sales 6. Follow-Ups (due / upcoming / resolved)
 │   │   ├── field/page.tsx     # CEO Field Mode: Quick Capture + pipeline board + Today's Follow-Ups
+│   │   ├── overseer/page.tsx  # Overseer Dashboard: health score, brief, alerts, forecasts
 │   │   └── api/                # route handlers backing every page (REST-ish JSON API)
-│   │       └── field/capture/route.ts  # chains all 6 sales loops from one Quick Capture submit
+│   │       ├── field/capture/route.ts   # chains all 6 sales loops from one Quick Capture submit
+│   │       └── overseer/                # GET snapshot, POST refresh (logs to history), GET history
 │   ├── components/            # Sidebar, Topbar, StatCard, StatusBadge, forms, LoopActionButton
-│   │   └── QuickCaptureForm.tsx  # mobile-friendly intake + "Run Sales Loops" + results panel
+│   │   ├── QuickCaptureForm.tsx  # mobile-friendly intake + "Run Sales Loops" + results panel
+│   │   └── overseer/             # HealthScoreCard, AlertList, RecommendationCard (presentational only)
 │   └── lib/
 │       ├── db.ts               # SQLite connection + schema bootstrap + column migrations
 │       ├── types.ts            # shared TypeScript types
 │       ├── packages.ts         # service package catalog
 │       ├── classify.ts         # business classification heuristics
 │       ├── leadBoard.ts        # New/Warm/Hot/Proposal Sent/Won/Lost bucketing for the field board
+│       ├── overseer/           # read-only observation engine — never writes business data
+│       │   ├── engine.ts          # computeOverseerSnapshot(): health score, brief, alerts, risks,
+│       │   │                       # opportunities, recommendations, forecasts — all pure reads
+│       │   ├── persist.ts         # the Overseer's only write: its own snapshot history
+│       │   ├── money.ts           # price-range string parsing for forecast math
+│       │   └── types.ts
 │       └── loops/              # the 14 loops — the actual "product"
 │           ├── engine.ts          # shared executeLoop/executeSalesLoop harness: input -> output -> DB -> status -> activity log
 │           ├── clientProfile.ts    ┐
@@ -158,6 +173,39 @@ shows a simplified **New / Warm / Hot / Proposal Sent / Won / Lost** board
 model down to these 6 columns) and a **Today's Follow-Ups** view of anything
 due or overdue.
 
+### Overseer Mode
+
+`/overseer` is a read-only intelligence dashboard, not a chat interface and
+not a loop that produces work. `computeOverseerSnapshot()`
+(`src/lib/overseer/engine.ts`) reads every table — clients, projects, tasks,
+leads, proposals, follow-ups — and derives, on every page load:
+
+- **Company Health Score** (0-100): a weighted blend of Sales Pipeline (30%),
+  Delivery (30%), Revenue (25%), and Responsiveness (15%) sub-scores.
+- **Daily Brief**: a one-line headline plus a handful of factual bullets
+  (active/hot leads, in-flight projects, follow-ups due, 30-day revenue estimate).
+- **Alerts**: overdue follow-ups, stalled proposals (sent 7+ days, no reply),
+  hot leads with no proposal yet, and tasks stuck in revision — severity-ranked.
+- **Risk Detection**: stalled lead flow, high proposal-decline rate, flatlined
+  delivery velocity, revenue concentrated in one client, too many cold/undiagnosed leads.
+- **Opportunity Detection**: hot leads ready to close, the best-converting lead
+  source, delivered clients who've only had one project (upsell candidates).
+- **Recommendations**: each one states its **Reason**, **Supporting Data**
+  (concrete numbers pulled live from the tables above), a **Confidence**
+  rating (High/Medium/Low, driven by sample size), and a **Suggested CEO
+  Action** — synthesized from the alerts/risks/opportunities above, always
+  at least one so the dashboard is never empty.
+- **Forecasts**: Revenue (in-flight project value + probability-weighted
+  proposal pipeline → a 30-day estimate), Project (on track / behind
+  schedule / nearing delivery, from task completion rate vs. elapsed time
+  against `timeline_weeks`), Lead (expected wins this month from summed
+  close probabilities), and Workload (open tasks ÷ 7-day completion velocity
+  → estimated days to clear the backlog).
+
+The only write the Overseer ever performs is logging its own assessment to
+`overseer_snapshots` via **Log Snapshot** (`POST /api/overseer/refresh`) —
+a history of past health scores, never a mutation of business data.
+
 Every loop run is itself persisted as a row in `loops` (type, input_json,
 output_json, status, timestamps) so the Loops page shows a full audit trail
 across both modes. Ops loops log to `activity_log`; sales loops log to the
@@ -170,7 +218,8 @@ See `db/schema.sql`. Operations tables: `clients`, `projects`, `tasks`,
 `packages`, `notes`, `activity_log`. Sales tables: `leads`, `conversations`,
 `proposals`, `follow_ups`, `sales_activity`. Both share the `loops` table
 (with `lead_id`/`proposal_id` columns alongside `client_id`/`project_id`/`task_id`)
-for a unified audit trail.
+for a unified audit trail. Overseer: `overseer_snapshots` — the Overseer's
+own history log, written only by the Overseer, read by nothing else.
 
 ## Roadmap to Supabase
 

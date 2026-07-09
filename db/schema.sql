@@ -188,6 +188,19 @@ CREATE TABLE IF NOT EXISTS sales_activity (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Overseer Mode ----------------------------------------------------------
+-- Read-only intelligence layer. The Overseer never writes to clients,
+-- projects, tasks, leads, proposals, or follow_ups — it only observes them
+-- and records its own point-in-time assessments here for a health-score
+-- history. Computing a snapshot never mutates business data.
+CREATE TABLE IF NOT EXISTS overseer_snapshots (
+  id TEXT PRIMARY KEY,
+  health_score INTEGER NOT NULL,
+  headline TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_loops_client ON loops(client_id);
@@ -202,3 +215,4 @@ CREATE INDEX IF NOT EXISTS idx_proposals_lead ON proposals(lead_id);
 CREATE INDEX IF NOT EXISTS idx_followups_lead ON follow_ups(lead_id);
 CREATE INDEX IF NOT EXISTS idx_followups_due ON follow_ups(due_at);
 CREATE INDEX IF NOT EXISTS idx_sales_activity_entity ON sales_activity(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_overseer_snapshots_created ON overseer_snapshots(created_at);

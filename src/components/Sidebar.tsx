@@ -5,6 +5,10 @@ import { usePathname } from "next/navigation";
 
 const SECTIONS = [
   {
+    label: "Overseer",
+    items: [{ href: "/overseer", label: "Overseer", icon: "◉", exact: true }],
+  },
+  {
     label: "Operations",
     items: [
       { href: "/", label: "Dashboard", icon: "◆", exact: true },
