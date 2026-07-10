@@ -36,10 +36,11 @@ const GENERIC_PAIN_SIGNALS: { pattern: string; label: string; weight: number }[]
  * Scores pain from raw text. Takes the profile already resolved by
  * classifyBusiness's industry detection (broader text: business name,
  * type, goals, pain points) rather than re-detecting from this narrower
- * pain/requested-service text — a lead whose only dental signal is in
- * business_type (e.g. Field Mode's "dental practice" field) still gets
- * dental pain signals, not a silent fallback to the generic list. With no
- * profile passed, this is byte-identical to the pre-engine implementation.
+ * pain/requested-service text — a lead whose only profile signal is in
+ * business_type (e.g. Field Mode's business-type field, captured
+ * separately from the pain transcript) still gets that profile's pain
+ * signals, not a silent fallback to the generic list. With no profile
+ * passed, this is byte-identical to the pre-engine implementation.
  */
 function scorePain(text: string, profile?: VerticalProfile): { painScore: number; painPoints: string[] } {
   const haystack = text.toLowerCase();
