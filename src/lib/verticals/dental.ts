@@ -207,6 +207,26 @@ const dentalProfile: VerticalProfile = {
     },
   ],
   sequences: dentalSequences,
+  proposalFraming: {
+    positioning: (ctx) => {
+      const leadPain = ctx.painPoints[0];
+      const pain = leadPain ? leadPain.toLowerCase() : "gaps in new-patient follow-up";
+      return `${ctx.businessName} is losing new-patient opportunity to ${pain}. A conversion-focused website paired with automated recall and reminders keeps more of that opportunity in your chairs instead of a competitor's — while giving your front desk one less thing to chase down manually.`;
+    },
+    nextStep: (ctx) =>
+      ctx.urgency === "high"
+        ? `Schedule a same-week 15-minute call with ${ctx.contactName} to review which service lines to feature and your front-desk booking flow.`
+        : `Schedule a 15-minute call with ${ctx.contactName} to review which service lines to feature and your front-desk booking flow.`,
+    staticSections: {
+      complianceFaq: [
+        "Our booking-request forms collect contact info and scheduling preference only — never health details.",
+        "Appointment reminder and recall messages never mention procedures or diagnoses.",
+        "We don't store any health information in our systems.",
+        "Integrating directly with your practice management system is a separately scoped engagement that starts with a BAA conversation.",
+      ],
+    },
+    proofPointQuery: { industryLabel: "Dental" },
+  },
 };
 
 registerProfile(dentalProfile);

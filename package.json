@@ -12,7 +12,8 @@
     "golden:check": "tsx scripts/golden.ts check",
     "verify:vertical-engine": "tsx scripts/verify-vertical-engine.ts",
     "verify:dental-profile": "tsx scripts/verify-dental-profile.ts",
-    "verify:sequence-engine": "tsx scripts/verify-sequence-engine.ts"
+    "verify:sequence-engine": "tsx scripts/verify-sequence-engine.ts",
+    "verify:proposal-framing": "tsx scripts/verify-proposal-framing.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

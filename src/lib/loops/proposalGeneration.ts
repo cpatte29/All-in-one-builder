@@ -1,6 +1,7 @@
 import { db, newId, nowIso } from "@/lib/db";
 import { executeSalesLoop, logSalesActivity } from "./engine";
 import { profileForIndustry } from "@/lib/verticals";
+import { buildFraming, buildNextStep } from "@/lib/proposals/framing";
 import { getLead } from "./leadCapture";
 import type { Package } from "@/lib/types";
 
@@ -41,19 +42,25 @@ export function runProposalGenerationLoop(input: ProposalGenerationInput) {
         const diagnosis = lead.diagnosis_json ? JSON.parse(lead.diagnosis_json) : { recommendedFocus: [] };
         const deliverables: string[] = JSON.parse(pkg.deliverables_json || "[]");
 
-        const nextStep = `Schedule a ${lead.urgency === "high" ? "same-week" : "kickoff"} call with ${lead.contact_name} to walk through the proposal and confirm scope.`;
+        const genericNextStep = `Schedule a ${lead.urgency === "high" ? "same-week" : "kickoff"} call with ${lead.contact_name} to walk through the proposal and confirm scope.`;
 
-        // A registered vertical profile's static framing sections (e.g. a
-        // compliance FAQ) merge into scope verbatim. Dynamic sections
-        // (positioning, proof point, a profile-aware next step) are the
-        // Proposal Framing Engine's job — not built by this packet. With no
-        // profiles registered, this is byte-identical to the pre-engine
-        // implementation.
+        // A registered vertical profile's framing (positioning, proof
+        // point, care plan, static sections like a compliance FAQ, and a
+        // profile-phrased next step) merges into scope via the Proposal
+        // Framing Engine (src/lib/proposals/framing.ts). With no profile
+        // matched, this is byte-identical to the pre-engine implementation.
         const profile = diagnosis.industry ? profileForIndustry(diagnosis.industry) : undefined;
+        const framingCtx = {
+          businessName: lead.business_name,
+          contactName: lead.contact_name,
+          urgency: lead.urgency,
+          painPoints: diagnosis.painPoints ?? [],
+        };
+        const nextStep = (profile && buildNextStep(profile, framingCtx)) || genericNextStep;
         const scope: ProposalGenerationOutput["scope"] = {
           deliverables,
           focusAreas: diagnosis.recommendedFocus ?? [],
-          ...(profile?.proposalFraming?.staticSections ?? {}),
+          ...(profile ? buildFraming(profile, framingCtx) : {}),
         };
 
         const proposalId = newId("prop");
