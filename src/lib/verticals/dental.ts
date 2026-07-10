@@ -1,5 +1,115 @@
 import { registerProfile } from "./registry";
 import type { VerticalProfile } from "./types";
+import type { SequenceSpec } from "@/lib/sequences/types";
+
+// Four sequences an appointment-driven business needs — the Sequence
+// Engine (src/lib/sequences/) is industry-free; this is the dental
+// vocabulary and timing layered on top of it. Every body/subject string
+// uses only the engine's closed placeholder set: {firstName},
+// {businessName}, {phone}, {link}, {dateTime}.
+const dentalSequences: SequenceSpec[] = [
+  {
+    id: "dental_booking_capture",
+    trigger: "lead_captured",
+    slaHours: 4,
+    steps: [
+      {
+        offset: { unit: "minutes", value: 0 },
+        channel: "email",
+        audience: "business",
+        template: {
+          subject: "New booking request — {firstName}",
+          body: "New booking request from {firstName} for {businessName}. Please follow up.",
+        },
+      },
+      {
+        offset: { unit: "minutes", value: 1 },
+        channel: "sms",
+        audience: "customer",
+        template: {
+          body: "Hi {firstName}, thanks for reaching out to {businessName} — we'll call you within a few business hours to get you scheduled. Questions? Call {phone}.",
+        },
+      },
+    ],
+  },
+  {
+    id: "dental_appointment_reminders",
+    trigger: "appointment_scheduled",
+    steps: [
+      {
+        offset: { unit: "days", value: -7 },
+        channel: "email",
+        audience: "customer",
+        template: {
+          subject: "Appointment reminder — {businessName}",
+          body: "Hi {firstName}, this is a reminder of your upcoming appointment with {businessName} on {dateTime}. Call {phone} if you need to reschedule.",
+        },
+      },
+      {
+        offset: { unit: "days", value: -2 },
+        channel: "sms",
+        audience: "customer",
+        template: {
+          body: "Hi {firstName}, reminder: you have an appointment with {businessName} on {dateTime}. Reply to confirm or call {phone}.",
+        },
+      },
+      {
+        offset: { unit: "hours", value: -3 },
+        channel: "sms",
+        audience: "customer",
+        template: {
+          body: "Hi {firstName}, see you soon! Your {businessName} appointment is at {dateTime}. Call {phone} with questions.",
+        },
+      },
+    ],
+  },
+  {
+    id: "dental_recall_reactivation",
+    trigger: "lapsed_customer",
+    steps: [
+      {
+        offset: { unit: "days", value: 0 },
+        channel: "email",
+        audience: "customer",
+        template: {
+          subject: "We miss you at {businessName}",
+          body: "Hi {firstName}, it's been a while since your last visit to {businessName}. We'd love to see you again — call {phone} to schedule.",
+        },
+      },
+      {
+        offset: { unit: "days", value: 14 },
+        channel: "sms",
+        audience: "customer",
+        template: {
+          body: "Hi {firstName}, just checking in — {businessName} has openings if you're due for a visit. Call {phone} anytime.",
+        },
+      },
+      {
+        offset: { unit: "days", value: 45 },
+        channel: "email",
+        audience: "customer",
+        template: {
+          subject: "Ready when you are — {businessName}",
+          body: "Hi {firstName}, whenever you're ready to come back to {businessName}, request an appointment here: {link}. Call {phone} with questions.",
+        },
+      },
+    ],
+  },
+  {
+    id: "dental_review_request",
+    trigger: "visit_completed",
+    steps: [
+      {
+        offset: { unit: "hours", value: 2 },
+        channel: "sms",
+        audience: "customer",
+        template: {
+          body: "Hi {firstName}, thanks for visiting {businessName} today! If you have a moment, we'd love a review: {link}",
+        },
+      },
+    ],
+  },
+];
 
 /**
  * Dental Profile v1. Pure data — see Packet 00 (src/lib/verticals/{types,
@@ -96,6 +206,7 @@ const dentalProfile: VerticalProfile = {
       priority: "high",
     },
   ],
+  sequences: dentalSequences,
 };
 
 registerProfile(dentalProfile);

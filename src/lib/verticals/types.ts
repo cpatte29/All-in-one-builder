@@ -2,6 +2,12 @@
 // implements this interface; engines (classify.ts, the loops under
 // src/lib/loops/) consult the registry and never name an industry
 // themselves (Platform Constitution, Article IV — Engine Purity).
+//
+// Dependency direction: a profile may depend on another engine's types (as
+// below, on the Sequence Engine's SequenceSpec) — that's "profile imports
+// engine types." The reverse must never happen (an engine importing from
+// src/lib/verticals/ would let industry-specific code leak into it).
+import type { SequenceSpec } from "@/lib/sequences/types";
 
 export interface ClassificationPainSignal {
   /** Lowercase substring matched against combined intake/pain text. */
@@ -53,11 +59,5 @@ export interface VerticalProfile {
   packages: VerticalPackages;
   onboardingTasks: OnboardingTaskSpec[];
   proposalFraming?: VerticalProposalFraming;
-  /**
-   * Reserved by this packet, typed precisely by the Sequence Engine packet
-   * (src/lib/sequences/types.ts) once it exists. Left opaque here rather
-   * than importing a module that doesn't exist yet — a profile packet
-   * narrows this type when it adds real sequences.
-   */
-  sequences?: unknown[];
+  sequences?: SequenceSpec[];
 }
