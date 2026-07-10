@@ -1,57 +1,69 @@
-# Packet 05 — Dental-Aware Proposal Generation
+# Packet 05 — Proposal Framing Engine + Dental Framing Pack
 
-**Executor:** Sonnet · **Depends on:** Packet 01
+**Executor:** Sonnet · **Depends on:** Packets 00, 01
+**Revised by 03-platform-review.md:** was a dental helper wired in with a
+package conditional; now a generic framing engine + dental framing data in
+the profile.
 
 ## Context
 
-The Proposal Generation Loop (`src/lib/loops/proposalGeneration.ts`) builds
-`proposals` rows from the matched package. For dental leads it must speak
-dentistry and answer the compliance objection preemptively — this is the
-"proposal" success criterion.
+Packet 00 landed the lookup + `staticSections` merge hook in the Proposal
+Generation Loop. This packet completes the engine (dynamic sections,
+proof-point lookup, rendering) and supplies the dental framing content.
+The engine must render *any* profile's framing; dentistry appears only in
+the dental profile module.
 
-## Spec
+## Spec — engine
 
-1. **`src/lib/proposals/dentalFraming.ts` (new)** — exports a
-   `buildDentalFraming(lead, diagnosis)` helper returning structured
-   sections merged into the proposal's `scope_json`:
-   - `positioning`: 2–3 sentences tying the lead's detected pain points to
-     outcomes in dental vocabulary (new-patient flow, recall, filled
-     chairs, review presence). Use the actual pain points from
-     `diagnosis_json`; no boilerplate that ignores capture data.
-   - `proofPoint`: one sentence referencing a delivered dental client
-     (query the DB for a delivered client with industry `Dental`, e.g.
-     Riverside Family Dental from seed data; omit the section cleanly if
-     none exists).
-   - `carePlan`: the `pkg_dental_care_plan` summary as a monthly line item
-     alongside the build quote.
-   - `complianceFaq`: fixed block — forms collect contact + scheduling
-     preference only; no health details collected or stored; reminder and
-     recall messages never mention procedures; PMS integration available as
-     a separate scoped engagement with a BAA.
-   - `nextStep`: urgency-aware, dental-phrased ("15-minute call to review
-     which service lines to feature and your front-desk booking flow").
+1. **`src/lib/proposals/framing.ts` (new, industry-free)** —
+   `buildFraming(profile, lead, diagnosis)`:
+   - Renders `profile.proposalFraming.positioning(ctx)` and `nextStep(ctx)`
+     with actual captured data (business name, real detected pain points,
+     contact, urgency) — the engine passes context, profiles own the prose.
+   - Resolves `proofPointQuery`: find one delivered client whose industry
+     matches `industryLabel`; produce a one-sentence citation; omit the
+     section cleanly when none exists.
+   - Resolves `recurringPackageId` into a `carePlan` section (name, price
+     range, deliverables) from the packages table.
+   - Merges `staticSections` verbatim.
+   - Returns a `FramingSections` record merged into the proposal's
+     `scope_json` by the loop when a profile with framing matches.
+2. **Proposal Detail (`src/app/proposals/[id]/page.tsx`)** — generic
+   renderer for known section shapes: `positioning` (paragraph above
+   deliverables), `proofPoint` (line under positioning), `carePlan` (own
+   card), `complianceFaq` (block at bottom), custom string/string[] sections
+   (labeled blocks). Absent sections render nothing — existing proposals
+   unaffected.
 
-2. **`src/lib/loops/proposalGeneration.ts`** — when the matched package is
-   `pkg_dental_practice`, merge the framing sections into `scope_json` and
-   use the dental `nextStep`. Non-dental proposals unchanged.
+## Spec — dental framing (in `src/lib/verticals/dental.ts`)
 
-3. **Proposal Detail page (`src/app/proposals/[id]/page.tsx`)** — render
-   the new sections when present: positioning paragraph above deliverables,
-   care plan as its own card, compliance FAQ collapsed-style block at the
-   bottom, proof point under positioning. Absent sections render nothing
-   (backward compatible with existing proposals).
+- `positioning(ctx)`: 2–3 sentences tying ctx.painPoints to dental outcomes
+  (new-patient flow, recall, filled chairs, review presence). Must
+  interpolate at least one actual pain point — no boilerplate.
+- `nextStep(ctx)`: urgency-aware, dental-phrased ("15-minute call to review
+  which service lines to feature and your front-desk booking flow";
+  same-week phrasing when urgency is high).
+- `staticSections.complianceFaq`: forms collect contact + scheduling
+  preference only; no health details collected or stored; reminders and
+  recall messages never mention procedures; PMS integration = separately
+  scoped engagement with a BAA.
+- `proofPointQuery: { industryLabel: "Dental" }` (Riverside Family Dental
+  in seed data).
+- `packages.recurringPackageId` already set in Packet 01 → carePlan section.
 
 ## Out of scope
 
-PDF export / e-signature. Editing proposals in-UI. Changing generic proposals.
+PDF/e-signature. In-UI editing. Changes to generic proposal output.
 
 ## Acceptance criteria
 
 - `npm run build` passes.
-- Dental lead through Field Mode → proposal `scope_json` contains all five
-  sections; Proposal Detail renders them; positioning references at least
-  one pain point actually captured on the lead.
-- With no delivered dental client in the DB, `proofPoint` is omitted and
-  the page renders without gaps.
-- A generic (non-dental) lead's proposal is byte-identical to today's
-  output (regression).
+- Dental lead via Field Mode → `scope_json` contains positioning (with a
+  real captured pain point), proofPoint, carePlan, complianceFaq, nextStep;
+  Proposal Detail renders all of them.
+- Empty DB of delivered dental clients → proofPoint omitted, page renders
+  without gaps.
+- Fixture-profile framing renders through the same engine in the
+  verification script (proves industry-independence).
+- Generic lead's proposal byte-identical to today (regression);
+  `grep -ri dental src/lib/proposals` returns nothing.

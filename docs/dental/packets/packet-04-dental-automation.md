@@ -1,63 +1,75 @@
-# Packet 04 — Dental Automation Package
+# Packet 04 — Sequence Engine + Dental Sequence Pack
 
-**Executor:** Sonnet · **Depends on:** Packet 01; pairs with Packet 03's booking form
+**Executor:** Sonnet · **Depends on:** Packet 00 (types), pairs with Packet 03's form
+**Revised by 03-platform-review.md:** was "dental automations"; the review
+found this the clearest engine case of all five — timed sequences, channel
+adapters, opt-out, SLA tasks are industry-agnostic. Engine first (04a),
+dental specs as data (04b), one packet.
 
 ## Context
 
-"Automation package" must be a concrete, buildable spec, not a deliverable
-string. The Claude Build Loop hands tasks to developers as structured
-briefs; this packet defines the four standard dental automations so those
-briefs are precise and identical across clients. MVP implementations are
-local-first (same philosophy as the rest of FABLE): sequence engines +
-message templates + adapter interfaces, with real SMS/email providers
-(Twilio/SendGrid) as documented adapter swaps, not hard dependencies.
+Automation deliverables must be concrete, buildable specs. Any
+appointment-driven business (dental, med spa, chiro, vet, salon) needs the
+same machinery: notify on lead capture, remind before appointments,
+reactivate lapsed customers, request reviews. Only templates, offsets, and
+vocabulary differ — that's data.
 
-## Spec
+## Spec — 04a: Sequence Engine (`src/lib/sequences/`)
 
-Create `src/lib/automations/dental/` in the FABLE repo with one module per
-automation plus shared types (`types.ts`: `SequenceStep`, `MessageTemplate`,
-`ChannelAdapter` with `console`/`file` dev adapters).
+1. **`types.ts`** — the contract:
+   - `SequenceSpec`: id, trigger (`lead_captured` | `appointment_scheduled`
+     | `lapsed_customer` | `visit_completed`), steps.
+   - `SequenceStep`: offset (relative to trigger), channel (`email`|`sms`),
+     `MessageTemplate`.
+   - `MessageTemplate`: subject?, body with a **closed placeholder set**:
+     `{firstName}`, `{businessName}`, `{phone}`, `{link}`, `{dateTime}` —
+     nothing else. **Type-level data minimization: no placeholder for
+     procedure/health/notes may exist, and step inputs are typed records
+     (`{ firstName, contact, ...trigger-specific timestamps }`) that cannot
+     carry free-text fields.**
+   - `ChannelAdapter` interface + dev adapters (`console`, `file`).
+2. **`engine.ts`** — resolve a spec against a trigger record: compute step
+   send-times, render templates, dispatch via adapter; skip everything when
+   `doNotContact` is set; emit an SLA follow-up task record when a
+   `lead_captured` sequence's acknowledgment isn't confirmed in time.
+   MVP scheduling = computed plan + manual/cron invocation; real
+   Twilio/SendGrid adapters are documented swap points, not dependencies.
+3. Profiles carry `sequences?: SequenceSpec[]` (field landed in Packet 00).
 
-1. **`bookingCapture.ts`** — on booking-request submission (Packet 03 form):
-   notify front desk (channel adapter, dev = console/file), auto-acknowledge
-   the patient ("We got your request — we'll call you within X business
-   hours"), and create a follow-up task if unconfirmed after the SLA.
-   Payload contains contact info + preferences only — **the adapter
-   interface must not accept a free-text health field; enforce via types.**
+## Spec — 04b: Dental sequence pack (data in `src/lib/verticals/dental.ts`)
 
-2. **`reminders.ts`** — appointment reminder sequence for a
-   `{ patientFirstName, phoneOrEmail, appointmentAt }` record: T-7d email,
-   T-2d SMS, T-3h SMS templates with confirm/reschedule reply guidance.
-   Message templates contain date/time + practice contact only — never
-   procedure or health details (a reminder mentioning treatment type is a
-   PHI leak on a lock screen).
+Four `SequenceSpec`s:
+1. **Booking capture** (`lead_captured`): notify front desk immediately;
+   auto-acknowledge patient ("we'll call within {X} business hours"); SLA
+   follow-up task if unconfirmed.
+2. **Appointment reminders** (`appointment_scheduled`): T-7d email, T-2d
+   SMS, T-3h SMS. Date/time + practice contact only — a reminder naming a
+   procedure is a PHI leak on a lock screen, and the closed placeholder set
+   makes it unrepresentable.
+3. **Recall/reactivation** (`lapsed_customer`, default 7 months): day-0
+   gentle email, day-14 SMS, day-45 final email with booking link.
+4. **Review request** (`visit_completed`): single message with review link;
+   once per visit; honors `doNotContact`.
 
-3. **`recall.ts`** — reactivation sequence for patients unseen for N months
-   (default 7): gentle email at day 0, SMS at day 14, final email at day 45
-   with booking-request link. Input is `{ firstName, contact, lastVisitAt }`
-   only.
+## Documentation
 
-4. **`reviewRequest.ts`** — post-visit single message (email or SMS) with
-   the practice's review link (from site config), sent once per visit,
-   opt-out honored via a `doNotContact` flag checked by every automation in
-   this package.
-
-5. **Documentation:** `docs/dental/automation-runbook.md` — per automation:
-   trigger, sequence table, template text, adapter swap instructions, and
-   the data-minimization rules restated. This runbook is what Quality
-   Review checks builds against.
+`docs/dental/automation-runbook.md` — per sequence: trigger, step table,
+verbatim template text, adapter swap instructions, data-minimization rules.
+Quality Review checks builds against this runbook.
 
 ## Out of scope
 
-Direct PMS (Dentrix/Eaglesoft/Open Dental) integrations — standard package
-excludes them; they require a BAA conversation and a custom proposal.
-Actual Twilio/SendGrid wiring (adapter swap docs only).
+PMS integrations (BAA conversation, separate proposal). Live provider
+wiring. Any second vertical's sequences.
 
 ## Acceptance criteria
 
 - `npm run build` passes.
-- Unit-style verification script or test exercising each sequence with the
-  dev adapter: correct steps at correct offsets, `doNotContact` short-circuits.
-- Type-level check: no automation input type accepts health/procedure
-  fields; templates contain no `{procedure}`-style placeholders.
-- Runbook exists and matches the implemented templates verbatim.
+- Verification script runs all four dental specs plus a synthetic fixture
+  spec through the engine with dev adapters: correct offsets, rendering,
+  `doNotContact` short-circuit, SLA task emission.
+- Type-level check: a step input carrying a `procedure` or free-text field
+  fails to compile; template with an unknown placeholder fails validation.
+- `grep -ri dental src/lib/sequences` returns nothing (engine is
+  industry-free; dental lives in the profile).
+- Runbook matches implemented templates verbatim.
