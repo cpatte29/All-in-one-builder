@@ -1,6 +1,7 @@
 import { db, nowIso } from "@/lib/db";
 import { executeLoop, logActivity } from "./engine";
 import { packageForScore } from "@/lib/packages";
+import { profileForIndustry } from "@/lib/verticals";
 import { getClient } from "./clientProfile";
 import type { Package } from "@/lib/types";
 
@@ -27,11 +28,19 @@ export function runPackageRecommendationLoop(input: PackageRecommendationInput) 
         }
 
         const diagnosis = JSON.parse(client.diagnosis_json) as { opportunityScore: number };
-        const def = packageForScore(diagnosis.opportunityScore);
-        const pkg = db.prepare("SELECT * FROM packages WHERE id = ?").get(def.id) as Package | undefined;
-        if (!pkg) throw new Error(`Package ${def.id} not seeded`);
 
-        const rationale = `Opportunity score ${diagnosis.opportunityScore}/100 places ${client.business_name} in the "${def.tier}" tier — recommending ${pkg.name}.`;
+        // A registered vertical profile owns package selection for its
+        // industry; otherwise fall back to the generic score-based tiers.
+        // With no profiles registered, client.industry never matches one
+        // and this is byte-identical to the pre-engine implementation.
+        const profile = client.industry ? profileForIndustry(client.industry) : undefined;
+        const packageId = profile ? profile.packages.buildPackageId : packageForScore(diagnosis.opportunityScore).id;
+        const pkg = db.prepare("SELECT * FROM packages WHERE id = ?").get(packageId) as Package | undefined;
+        if (!pkg) throw new Error(`Package ${packageId} not seeded`);
+
+        const rationale = profile
+          ? `${client.business_name} is diagnosed as ${profile.industryLabel} — recommending the ${pkg.name}.`
+          : `Opportunity score ${diagnosis.opportunityScore}/100 places ${client.business_name} in the "${pkg.tier}" tier — recommending ${pkg.name}.`;
 
         db.prepare(
           `UPDATE clients SET recommended_package_id = ?, status = 'package_recommended', updated_at = ? WHERE id = ?`

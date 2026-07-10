@@ -1,3 +1,5 @@
+import { detectProfile } from "./verticals";
+
 export interface BusinessClassification {
   industry: string;
   businessType: string;
@@ -47,11 +49,22 @@ export function classifyBusiness(input: {
     .join(" ")
     .toLowerCase();
 
-  let industry = "General Business";
-  for (const [name, keywords] of Object.entries(INDUSTRY_KEYWORDS)) {
-    if (scoreMatch(haystack, keywords)) {
-      industry = name;
-      break;
+  // Vertical Profile Engine: a registered profile's keywords take priority
+  // over the generic industry map (Platform Constitution, Article III —
+  // Frameworks Before Features). With no profiles registered, this is a
+  // no-op and behavior below is unchanged from before the engine existed.
+  const profile = detectProfile(haystack);
+
+  let industry: string;
+  if (profile) {
+    industry = profile.industryLabel;
+  } else {
+    industry = "General Business";
+    for (const [name, keywords] of Object.entries(INDUSTRY_KEYWORDS)) {
+      if (scoreMatch(haystack, keywords)) {
+        industry = name;
+        break;
+      }
     }
   }
 
@@ -67,6 +80,8 @@ export function classifyBusiness(input: {
   const businessType = input.businessTypeRaw?.trim() || industry;
 
   // Opportunity score: heuristic blend of signals gathered at intake.
+  // Industry-agnostic by design — a profile changes *which* industry and
+  // pain points are detected, never how the score itself is computed.
   let score = 20;
   if (!input.websitePresent) score += 15; // no site = clear starter opportunity, but also urgency
   if (input.websitePresent) score += 10; // has a site = further along, room for automation upsell
@@ -85,18 +100,30 @@ export function classifyBusiness(input: {
 
   const painPoints: string[] = [];
   if (!input.websitePresent) painPoints.push("No existing web presence");
-  if ((input.painPoints || "").toLowerCase().includes("lead")) painPoints.push("Lead capture / follow-up gaps");
-  if ((input.painPoints || "").toLowerCase().includes("manual") || (input.painPoints || "").toLowerCase().includes("time"))
-    painPoints.push("Manual, time-consuming operations");
-  if ((input.painPoints || "").toLowerCase().includes("book") || (input.painPoints || "").toLowerCase().includes("schedul"))
-    painPoints.push("Scheduling / booking friction");
+  if (profile) {
+    for (const signal of profile.classification.painSignals) {
+      if (haystack.includes(signal.pattern) && !painPoints.includes(signal.label)) {
+        painPoints.push(signal.label);
+      }
+    }
+  } else {
+    if ((input.painPoints || "").toLowerCase().includes("lead")) painPoints.push("Lead capture / follow-up gaps");
+    if ((input.painPoints || "").toLowerCase().includes("manual") || (input.painPoints || "").toLowerCase().includes("time"))
+      painPoints.push("Manual, time-consuming operations");
+    if ((input.painPoints || "").toLowerCase().includes("book") || (input.painPoints || "").toLowerCase().includes("schedul"))
+      painPoints.push("Scheduling / booking friction");
+  }
   if (painPoints.length === 0) painPoints.push("Undifferentiated online presence");
 
   const recommendedFocus: string[] = [];
-  if (!input.websitePresent) recommendedFocus.push("Website foundation");
-  if (score >= 31) recommendedFocus.push("Lead + follow-up automation");
-  if (score >= 61) recommendedFocus.push("Internal operations tooling");
-  if (score >= 86) recommendedFocus.push("Multi-system platform integration");
+  if (profile) {
+    recommendedFocus.push(...profile.classification.recommendedFocus);
+  } else {
+    if (!input.websitePresent) recommendedFocus.push("Website foundation");
+    if (score >= 31) recommendedFocus.push("Lead + follow-up automation");
+    if (score >= 61) recommendedFocus.push("Internal operations tooling");
+    if (score >= 86) recommendedFocus.push("Multi-system platform integration");
+  }
 
   return { industry, businessType, size, opportunityScore: score, painPoints, recommendedFocus };
 }

@@ -1,5 +1,6 @@
 import { db, newId, nowIso } from "@/lib/db";
 import { executeLoop, logActivity } from "./engine";
+import { profileForPackageId } from "@/lib/verticals";
 import type { Project } from "@/lib/types";
 
 export interface TaskGenerationInput {
@@ -71,10 +72,24 @@ export function runTaskGenerationLoop(input: TaskGenerationInput) {
            VALUES (?, ?, ?, ?, ?, 'backlog', ?, ?, ?)`
         );
 
-        for (const base of CATEGORY_TEMPLATES.default) {
-          const id = newId("task");
-          insert.run(id, projectId, base.title, null, "Setup", base.priority, nowIso(), nowIso());
-          generated.push({ id, title: base.title, category: "Setup", priority: base.priority });
+        // A registered vertical profile owns onboarding for projects built
+        // on its package; otherwise fall back to the two generic setup
+        // tasks. With no profiles registered, project.package_id never
+        // matches one and this is byte-identical to the pre-engine
+        // implementation.
+        const profile = project.package_id ? profileForPackageId(project.package_id) : undefined;
+        if (profile) {
+          for (const t of profile.onboardingTasks) {
+            const id = newId("task");
+            insert.run(id, projectId, t.title, t.description, "Onboarding", t.priority, nowIso(), nowIso());
+            generated.push({ id, title: t.title, category: "Onboarding", priority: t.priority });
+          }
+        } else {
+          for (const base of CATEGORY_TEMPLATES.default) {
+            const id = newId("task");
+            insert.run(id, projectId, base.title, null, "Setup", base.priority, nowIso(), nowIso());
+            generated.push({ id, title: base.title, category: "Setup", priority: base.priority });
+          }
         }
 
         for (const deliverable of scope.deliverables) {

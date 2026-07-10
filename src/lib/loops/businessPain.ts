@@ -1,6 +1,7 @@
 import { db, nowIso } from "@/lib/db";
 import { executeSalesLoop, logSalesActivity } from "./engine";
 import { classifyBusiness } from "@/lib/classify";
+import { detectProfile } from "@/lib/verticals";
 import { getLead } from "./leadCapture";
 
 export interface BusinessPainInput {
@@ -16,27 +17,38 @@ export interface BusinessPainOutput {
   recommendedFocus: string[];
 }
 
-const PAIN_KEYWORDS: { keyword: string; label: string; weight: number }[] = [
-  { keyword: "lead", label: "Lead capture / follow-up gaps", weight: 20 },
-  { keyword: "manual", label: "Manual, time-consuming operations", weight: 20 },
-  { keyword: "time", label: "Time-consuming manual work", weight: 15 },
-  { keyword: "book", label: "Scheduling / booking friction", weight: 15 },
-  { keyword: "schedul", label: "Scheduling / booking friction", weight: 15 },
-  { keyword: "lose", label: "Losing business to competitors", weight: 20 },
-  { keyword: "losing", label: "Losing business to competitors", weight: 20 },
-  { keyword: "slow", label: "Slow response / turnaround", weight: 15 },
-  { keyword: "no website", label: "No web presence", weight: 20 },
-  { keyword: "outdated", label: "Outdated systems / site", weight: 15 },
-  { keyword: "frustrat", label: "High frustration with current process", weight: 15 },
-  { keyword: "urgent", label: "Urgent / time-sensitive need", weight: 15 },
+const GENERIC_PAIN_SIGNALS: { pattern: string; label: string; weight: number }[] = [
+  { pattern: "lead", label: "Lead capture / follow-up gaps", weight: 20 },
+  { pattern: "manual", label: "Manual, time-consuming operations", weight: 20 },
+  { pattern: "time", label: "Time-consuming manual work", weight: 15 },
+  { pattern: "book", label: "Scheduling / booking friction", weight: 15 },
+  { pattern: "schedul", label: "Scheduling / booking friction", weight: 15 },
+  { pattern: "lose", label: "Losing business to competitors", weight: 20 },
+  { pattern: "losing", label: "Losing business to competitors", weight: 20 },
+  { pattern: "slow", label: "Slow response / turnaround", weight: 15 },
+  { pattern: "no website", label: "No web presence", weight: 20 },
+  { pattern: "outdated", label: "Outdated systems / site", weight: 15 },
+  { pattern: "frustrat", label: "High frustration with current process", weight: 15 },
+  { pattern: "urgent", label: "Urgent / time-sensitive need", weight: 15 },
 ];
 
+/**
+ * Scores pain from raw text. When a vertical profile matches the text, its
+ * pain signals are used instead of the generic list — the same
+ * "profile owns its own vocabulary" pattern classify.ts uses, applied here
+ * because this loop has its own independent pain-detection path (it scores
+ * off the CEO's captured words, not classifyBusiness's generic signals).
+ * With no profiles registered, detectProfile always returns undefined and
+ * this is byte-identical to the pre-engine implementation.
+ */
 function scorePain(text: string): { painScore: number; painPoints: string[] } {
   const haystack = text.toLowerCase();
+  const profile = detectProfile(haystack);
+  const signals = profile ? profile.classification.painSignals : GENERIC_PAIN_SIGNALS;
   let score = text.trim().length > 0 ? 20 : 0; // baseline for having any stated pain at all
   const painPoints: string[] = [];
-  for (const { keyword, label, weight } of PAIN_KEYWORDS) {
-    if (haystack.includes(keyword) && !painPoints.includes(label)) {
+  for (const { pattern, label, weight } of signals) {
+    if (haystack.includes(pattern) && !painPoints.includes(label)) {
       score += weight;
       painPoints.push(label);
     }

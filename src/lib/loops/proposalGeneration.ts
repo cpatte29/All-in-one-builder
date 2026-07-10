@@ -1,5 +1,6 @@
 import { db, newId, nowIso } from "@/lib/db";
 import { executeSalesLoop, logSalesActivity } from "./engine";
+import { profileForIndustry } from "@/lib/verticals";
 import { getLead } from "./leadCapture";
 import type { Package } from "@/lib/types";
 
@@ -10,7 +11,7 @@ export interface ProposalGenerationInput {
 export interface ProposalGenerationOutput {
   proposalId: string;
   packageName: string;
-  scope: { deliverables: string[]; focusAreas: string[] };
+  scope: { deliverables: string[]; focusAreas: string[]; [section: string]: unknown };
   priceRange: string;
   timelineWeeks: number;
   deliverables: string[];
@@ -42,7 +43,18 @@ export function runProposalGenerationLoop(input: ProposalGenerationInput) {
 
         const nextStep = `Schedule a ${lead.urgency === "high" ? "same-week" : "kickoff"} call with ${lead.contact_name} to walk through the proposal and confirm scope.`;
 
-        const scope = { deliverables, focusAreas: diagnosis.recommendedFocus ?? [] };
+        // A registered vertical profile's static framing sections (e.g. a
+        // compliance FAQ) merge into scope verbatim. Dynamic sections
+        // (positioning, proof point, a profile-aware next step) are the
+        // Proposal Framing Engine's job — not built by this packet. With no
+        // profiles registered, this is byte-identical to the pre-engine
+        // implementation.
+        const profile = diagnosis.industry ? profileForIndustry(diagnosis.industry) : undefined;
+        const scope: ProposalGenerationOutput["scope"] = {
+          deliverables,
+          focusAreas: diagnosis.recommendedFocus ?? [],
+          ...(profile?.proposalFraming?.staticSections ?? {}),
+        };
 
         const proposalId = newId("prop");
         db.prepare(
