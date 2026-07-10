@@ -33,7 +33,16 @@ function assert(condition: boolean, message: string) {
 async function main() {
   const { db } = await import("../src/lib/db");
   const { PACKAGE_CATALOG } = await import("../src/lib/packages");
-  const { runLeadCaptureLoop, runBusinessPainLoop, runOfferMatchLoop } = await import("../src/lib/loops");
+  const {
+    runLeadCaptureLoop,
+    runBusinessPainLoop,
+    runOfferMatchLoop,
+    runClientProfileLoop,
+    runBusinessDiagnosisLoop,
+    runPackageRecommendationLoop,
+    runProjectScopeLoop,
+    runTaskGenerationLoop,
+  } = await import("../src/lib/loops");
 
   const insertPackage = db.prepare(
     `INSERT INTO packages (id, name, tier, description, price_range, deliverables_json, timeline_weeks)
@@ -81,6 +90,45 @@ async function main() {
   assert(
     offerMatch.output.rationale.includes("Dental"),
     `offerMatch.rationale cites the industry (got "${offerMatch.output.rationale}")`
+  );
+
+  console.log("\nOps-side dental project (scope -> task generation):");
+
+  const clientProfile = runClientProfileLoop({
+    businessName: "Sunrise Family Dental",
+    contactName: "Dr. Alex Rivera",
+    email: "alex@sunrisefamilydental.test",
+    businessType: "dental practice",
+    goals: "Fill more new-patient slots and stop losing recall patients.",
+    painPoints: "We have a lot of no-show appointments and patients who haven't been back in years.",
+    budgetRange: "$6,000 - $12,000",
+  });
+  const clientId = clientProfile.output.clientId;
+  runBusinessDiagnosisLoop({ clientId });
+  runPackageRecommendationLoop({ clientId });
+  const scope = runProjectScopeLoop({ clientId });
+  const taskGen = runTaskGenerationLoop({ projectId: scope.output.projectId });
+
+  const onboardingTasks = taskGen.output.tasks.slice(0, 8);
+  assert(
+    onboardingTasks.every((t) => t.category === "Onboarding"),
+    `first 8 tasks are all category "Onboarding" (got ${JSON.stringify(onboardingTasks.map((t) => t.category))})`
+  );
+  assert(
+    onboardingTasks[0].title === "Collect practice basics",
+    `first onboarding task is "Collect practice basics" (got "${onboardingTasks[0].title}")`
+  );
+  assert(
+    onboardingTasks[7].title === "Data-handling briefing",
+    `8th onboarding task is "Data-handling briefing" (got "${onboardingTasks[7]?.title}")`
+  );
+  assert(
+    taskGen.output.tasks.length > 8,
+    `deliverable-derived tasks follow the onboarding checklist (got ${taskGen.output.tasks.length} total tasks)`
+  );
+  assert(
+    taskGen.output.tasks[8]?.category !== "Onboarding",
+    `9th task is deliverable-derived, not another onboarding task (got category "${taskGen.output.tasks[8]?.category}")`
   );
 
   console.log("\nControl: a non-dental keyword must not match the dental profile:");

@@ -79,7 +79,7 @@ export default function QuickCaptureForm() {
           <textarea
             name="whatTheySaid"
             className={`${fieldClass} min-h-28`}
-            placeholder="Paste a voice-to-text transcript or jot down what they told you about their problem..."
+            placeholder="Paste a voice-to-text transcript or jot down what they told you about their problem... (e.g. front desk can't keep up, patients not coming back for recall)"
           />
         </div>
 
