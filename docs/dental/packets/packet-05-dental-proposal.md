@@ -67,3 +67,47 @@ PDF/e-signature. In-UI editing. Changes to generic proposal output.
   verification script (proves industry-independence).
 - Generic lead's proposal byte-identical to today (regression);
   `grep -ri dental src/lib/proposals` returns nothing.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Framing engine is industry-free
+(grep-enforced); dental prose lives in the profile as pure functions of
+captured lead data; compliance FAQ ships in `staticSections` so the posture
+appears in every dental proposal without engine knowledge of it.
+
+**Frameworks Before Features:** PASS — fixture-profile framing must render
+through the same engine in the verification script.
+
+**Engine purity:** grep criterion above; additionally the engine must not
+special-case any section *name* beyond the render shapes listed (a profile
+adding a custom section gets the generic labeled-block rendering).
+
+**Loop Contract:** PASS. Proposal Generation Loop is unchanged in shape:
+input `{ leadId }`, structured output, `proposals` row persisted, lead
+status → `proposal_ready`, sales activity logged. Framing enriches
+`scope_json` inside the existing side-effect path — no second write path,
+no new loop type.
+
+**Backward compatibility:** proposals without framing sections render
+exactly as today (renderer returns nothing for absent sections); generic
+proposal output byte-identical (golden scenario). Existing dental-less DBs:
+proof point cleanly omitted — explicitly tested.
+
+**Dependencies:** Packets 00 and 01 (including F1 — without the seed
+industry correction the proof-point acceptance cannot pass). Merge after
+04 if both are in flight (shared `dental.ts`).
+
+**Regression plan:** golden harness — generic proposal scenario diffs
+empty; dental proposal scenario added with all five sections asserted;
+empty-proof-point path exercised against a DB seeded without the delivered
+dental client (harness variant).
+
+**Success criteria:** acceptance criteria + both dental baselines (with and
+without proof point) committed.
+
+**Rollback criteria:** revert if the generic proposal diff is non-empty, if
+Proposal Detail errors on any pre-existing proposal row, or if grep purity
+fails. Nothing depends on 05; it reverts freely (mind the shared
+`dental.ts` hunk if 04 merged after it).

@@ -51,3 +51,39 @@ Engine edits of any kind. New tables. Task Generation Loop code.
   order, category "Onboarding", then deliverable-derived tasks.
 - Generic project task output unchanged (regression).
 - Diff touches only `src/lib/verticals/dental.ts` and the form placeholder.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Data-only packet: an ordered task array
+in the dental profile plus placeholder copy. Zero engine surface.
+
+**Frameworks Before Features:** PASS — relies entirely on Packet 00's
+generic onboarding-prepend hook; any temptation to touch
+`taskGeneration.ts` here means the hook is defective in 00.
+
+**Engine purity:** trivially maintained (no engine files in the diff —
+enforced by the diff-scope acceptance criterion).
+
+**Loop Contract:** Task Generation Loop continues through `executeLoop`
+unchanged: input `{ projectId }`, structured task-list output, tasks
+persisted, project status → `tasks_generated`, activity logged. The
+onboarding tasks ride the existing side-effect path.
+
+**Backward compatibility:** generic projects get the generic setup tasks
+exactly as today (golden scenario (b) covers this). Dental projects gain
+the 8-task checklist — new behavior, new baseline.
+
+**Dependencies:** Packets 00 and 01 merged and green.
+
+**Regression plan:** golden harness — generic scenarios diff empty; extend
+the dental scenario through scope → task generation and commit the
+baseline showing the 8 onboarding tasks first, in order, category
+"Onboarding".
+
+**Success criteria:** acceptance criteria + dental task baseline committed.
+
+**Rollback criteria:** revert if generic task output changes, if the diff
+exceeds the two files, or if onboarding tasks appear on non-dental
+projects. No packets depend on 02; it reverts freely.

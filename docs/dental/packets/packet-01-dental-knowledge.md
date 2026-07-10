@@ -58,4 +58,59 @@ Any edit under `src/lib/loops/`, `src/lib/classify.ts`, or
   `pkg_dental_practice` citing the industry.
 - HVAC capture output unchanged from today (regression).
 - `git diff` for this packet touches only `src/lib/verticals/dental.ts`,
-  `src/lib/verticals/index.ts`, `src/lib/packages.ts`, and seed-verification.
+  `src/lib/verticals/index.ts`, `src/lib/packages.ts`, `src/lib/classify.ts`
+  (one-line keyword removal, F2), and `db/seed.ts` (industry correction, F1).
+
+## Verification findings folded into this packet (from EXECUTION-ORDER.md)
+
+- **F1:** update `db/seed.ts` so Riverside Family Dental's `industry` (and
+  the industry inside its `diagnosis_json`) is `"Dental"` — otherwise
+  Packet 05's proof-point query finds nothing. Data correction to sample
+  data; no migration.
+- **F2:** remove the `"dental"` keyword from the generic Health & Wellness
+  map in `src/lib/classify.ts` — it moves into this profile. This is a
+  data move, not an engine edit; it is the one permitted `classify.ts`
+  touch in this packet.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Pure profile data + catalog entries.
+The two engine-adjacent touches (F1 seed line, F2 keyword removal) are data
+corrections mandated by findings, itemized above, and limited to single
+lines. If anything else in an engine file needs editing to make this packet
+work, **stop — that is a Packet 00 defect; fix it there, do not widen this
+packet.**
+
+**Frameworks Before Features:** PASS — this packet is the proof: dentistry
+enters the platform without a single engine branch.
+
+**Engine purity:** from this packet's completion, the full-tree grep is
+binding: `grep -ri dental src/lib/loops src/lib/classify.ts` → no matches
+(`src/lib/verticals/` is the sanctioned home).
+
+**Loop Contract:** not applicable directly (no loop code); indirectly
+verified because profile-driven diagnosis/offer-match outputs still flow
+through the standard harness — covered by the dental scenario added to the
+golden harness in this packet.
+
+**Backward compatibility:** the only intentional behavior change is that
+dental-keyword businesses now classify as "Dental" instead of "Health &
+Wellness" — this is the directive's purpose, affects newly-run loops only,
+and never rewrites existing rows. Generic (non-dental-keyword) scenarios
+must diff empty.
+
+**Dependencies:** Packet 00 merged and green.
+
+**Regression plan:** golden harness — generic scenarios diff empty; add
+dental capture scenario (businessType "dental practice") and commit its
+baseline; verify 6 packages seeded; verify Riverside surfaces with
+industry "Dental" after re-seed.
+
+**Success criteria:** acceptance criteria + F1/F2 verified + dental golden
+baseline committed.
+
+**Rollback criteria:** revert if generic golden diff is non-empty, if the
+diff touches files beyond the five listed, or if grep purity fails. 02/04/05
+must not merge until 01 is green.

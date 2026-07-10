@@ -88,4 +88,47 @@ internals (04), framing renderer (05).
 - With no profiles registered, every loop output is byte-identical to
   current behavior (regression).
 - `grep -ri dental src/lib/verticals src/lib/loops src/lib/classify.ts`
-  returns nothing.
+  returns nothing **in code this packet adds or modifies**. Note: the
+  pre-existing generic keyword `"dental"` in `classify.ts`'s Health &
+  Wellness map is exempt here — it is removed by Packet 01 (finding F2 in
+  EXECUTION-ORDER.md). Full-tree grep purity is binding from Packet 01.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Engines gain profile *lookups* only; no
+industry names (F2 exemption noted above); no schema changes; profiles are
+versioned data (`version` field mandatory); no speculative verticals (the
+only profile shipped here is the synthetic test fixture, unregistered in
+production paths).
+
+**Loop Contract:** PASS. This packet modifies loop *internals*
+(classification source, package selection, task-template source, scope_json
+merge) but every touched loop still runs through
+`executeLoop`/`executeSalesLoop`: structured input → structured output →
+DB persist → status update → activity log. No new loop types introduced;
+no harness bypass permitted.
+
+**Backward compatibility:** with an empty registry, `detectProfile` returns
+nothing and every code path falls through to current behavior. This is the
+load-bearing property of the whole package — verified by the golden
+harness, not by inspection.
+
+**Dependencies:** none (first packet). The golden-baseline harness
+(EXECUTION-ORDER.md) must be built and its baseline committed *before*
+this packet's changes.
+
+**Regression plan:** run golden harness after merge — all four generic
+scenarios must diff empty. Run fixture-profile verification script —
+detection, package selection, onboarding prepend, staticSections merge all
+demonstrated. `npm run build` + `npm run db:seed` clean.
+
+**Success criteria:** acceptance criteria above + empty golden diff +
+fixture script output committed as evidence in the PR/commit description.
+
+**Rollback criteria:** revert this packet's single commit if: golden diff
+non-empty on any generic scenario; build fails; or the fixture script
+cannot demonstrate all four engine hooks. Dependents (01, 02, 04, 05) must
+not merge until 00 is green; if 00 is reverted after any dependent merged,
+revert dependents first.

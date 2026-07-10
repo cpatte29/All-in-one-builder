@@ -73,3 +73,50 @@ wiring. Any second vertical's sequences.
 - `grep -ri dental src/lib/sequences` returns nothing (engine is
   industry-free; dental lives in the profile).
 - Runbook matches implemented templates verbatim.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Engine (04a) is industry-free and
+grep-enforced; dental sequences (04b) are data in the profile; the closed
+placeholder set makes the compliance posture *unrepresentable* rather than
+merely documented — the strongest form of the data-minimization rule.
+
+**Frameworks Before Features:** PASS — the review's clearest engine case.
+Fixture sequence spec in the verification script proves industry
+independence.
+
+**Engine purity:** grep criterion above.
+
+**Loop Contract:** the Sequence Engine is NOT a loop and must not be
+disguised as one — it has no DB writes in MVP beyond emitting an SLA
+follow-up task record, which must go through the existing `follow_ups` /
+`tasks` write paths if persisted. If Sonnet finds the SLA task needs
+persistence, it uses the existing table + logs sales activity via the
+existing helper — no new harness, no new activity feeds.
+
+**Backward compatibility:** purely additive (`src/lib/sequences/` is new;
+profile gains an optional field). Golden harness must diff empty across
+the board — no existing endpoint changes behavior.
+
+**Dependencies:** Packet 00 (profile `sequences` field + types), Packet 01
+(the dental profile module to attach specs to). Pairs with Packet 03's
+form at delivery time but has no build-time dependency on it. If run in
+parallel with 05, merge 04 first (both edit `dental.ts`).
+
+**Regression plan:** golden harness diff empty (no API surface changes);
+sequence verification script output (offsets, rendering, doNotContact, SLA
+emission) committed as evidence; type-level negative test present
+(uncompilable health-field example, kept as a type-error fixture or
+documented compile-failure check).
+
+**Success criteria:** acceptance criteria + verification script evidence +
+runbook/template verbatim match.
+
+**Rollback criteria:** revert if golden diff is non-empty, if any template
+placeholder outside the closed set exists, or if the engine imports
+anything from `src/lib/verticals/` (dependency direction must be
+profile → engine types, never engine → profiles). Packet 05 does not
+depend on 04; it reverts freely unless 05 was merged with references to
+04's types in `dental.ts` — in that case revert 05's `dental.ts` hunk first.

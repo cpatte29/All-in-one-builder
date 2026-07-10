@@ -67,3 +67,42 @@ Automations (Packet 04). CMS. Multi-location. Any second content pack.
 - Grep checks: no health-soliciting field/copy anywhere; no `dental` string
   under the base (`templates/vertical-site/src/`) — dental appears only
   under `packs/dental/`.
+
+---
+
+## Execution Verification (Overseer)
+
+**Constitution compliance:** PASS. Base/pack split mirrors the
+engine/profile split; one real pack (dental) + synthetic fixture pack in
+verification only; data-minimization posture enforced structurally (base
+owns the form; packs cannot add fields).
+
+**Frameworks Before Features:** PASS. The pack manifest is the framework
+claim — proven by compiling a fixture pack against it, not by shipping a
+speculative second vertical.
+
+**Engine purity:** grep criterion above (no `dental` under the base's
+`src/`).
+
+**Loop Contract:** not applicable — the template is a deliverable artifact,
+not part of the FABLE loop system. It must not import from or write to
+FABLE's database. The template's lead-capture storage adapter is its own
+local concern.
+
+**Backward compatibility:** the only FABLE-repo touch is the root
+`tsconfig.json` exclude. Root `npm run build` unaffected is the entire
+compatibility surface — verified explicitly.
+
+**Dependencies:** none hard (Packet 00 for naming conventions only).
+Parallel-safe with 00/01; shares no files with any other packet.
+
+**Regression plan:** root golden harness untouched and green (proves no
+dashboard impact); template's own build + form-submission check in dev;
+fixture-pack compile check.
+
+**Success criteria:** acceptance criteria + both builds green + rebrand-by-
+config demonstrated with a diff of only `site.config.ts`.
+
+**Rollback criteria:** revert if the root build breaks or any file outside
+`templates/vertical-site/` + the one-line tsconfig exclude appears in the
+diff. Nothing depends on 03; it reverts freely.
