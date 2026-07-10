@@ -1,0 +1,302 @@
+{
+  "opsChain": {
+    "clientProfile": {
+      "clientId": "<id:client>",
+      "normalizedProfile": {
+        "businessName": "Golden Ops Consulting",
+        "contactName": "Jordan Lee",
+        "email": "jordan@goldenops.test",
+        "hasWebsite": false
+      }
+    },
+    "diagnosis": {
+      "industry": "Professional Services",
+      "businessType": "General business consulting",
+      "size": "Small",
+      "opportunityScore": 70,
+      "painPoints": [
+        "No existing web presence",
+        "Lead capture / follow-up gaps",
+        "Manual, time-consuming operations",
+        "Scheduling / booking friction"
+      ],
+      "recommendedFocus": [
+        "Website foundation",
+        "Lead + follow-up automation",
+        "Internal operations tooling"
+      ]
+    },
+    "recommendation": {
+      "packageId": "pkg_pro_ai_ops",
+      "packageName": "Pro AI Ops Package",
+      "rationale": "Opportunity score 70/100 places Golden Ops Consulting in the \"pro\" tier — recommending Pro AI Ops Package."
+    },
+    "scope": {
+      "projectId": "<id:proj>",
+      "scope": {
+        "deliverables": [
+          "Custom web app or internal portal",
+          "AI-assisted customer support / intake workflows",
+          "Internal operations dashboard",
+          "Third-party integrations (CRM, payments, scheduling)"
+        ],
+        "timelineWeeks": 6,
+        "priceQuote": "$9,000 - $18,000",
+        "focusAreas": [
+          "Website foundation",
+          "Lead + follow-up automation",
+          "Internal operations tooling"
+        ]
+      }
+    },
+    "taskGen": {
+      "taskCount": 10,
+      "tasks": [
+        {
+          "id": "<id:task>",
+          "title": "Set up project repo and environment",
+          "category": "Setup",
+          "priority": "high"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Confirm brand assets (logo, colors, copy)",
+          "category": "Setup",
+          "priority": "medium"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Build: Custom web app or internal portal",
+          "category": "Product Build",
+          "priority": "high"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Write acceptance tests for: Custom web app or internal portal",
+          "category": "QA",
+          "priority": "medium"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Configure: AI-assisted customer support / intake workflows",
+          "category": "Automation",
+          "priority": "high"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Test end-to-end flow for: AI-assisted customer support / intake workflows",
+          "category": "QA",
+          "priority": "medium"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Build: Internal operations dashboard",
+          "category": "Product Build",
+          "priority": "high"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Write acceptance tests for: Internal operations dashboard",
+          "category": "QA",
+          "priority": "medium"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Configure: Third-party integrations (CRM, payments, scheduling)",
+          "category": "Automation",
+          "priority": "high"
+        },
+        {
+          "id": "<id:task>",
+          "title": "Test end-to-end flow for: Third-party integrations (CRM, payments, scheduling)",
+          "category": "QA",
+          "priority": "medium"
+        }
+      ]
+    },
+    "build": {
+      "taskTitle": "Set up project repo and environment",
+      "context": "Client: Golden Ops Consulting (Professional Services). Project: Golden Ops Consulting — Pro AI Ops Package. Category: Setup.",
+      "spec": [
+        "Implement \"Set up project repo and environment\" as part of Golden Ops Consulting — Pro AI Ops Package.",
+        "Follow the Golden Ops Consulting brand and existing project conventions.",
+        "Category: Setup. Priority: high."
+      ],
+      "acceptanceCriteria": [
+        "Feature matches the task title and description.",
+        "No regressions to existing functionality in the project.",
+        "Code is typed, lint-clean, and covered by a manual verification pass."
+      ],
+      "suggestedFiles": []
+    },
+    "review": {
+      "passed": true,
+      "notes": "Meets spec.",
+      "nextStatus": "done"
+    },
+    "clientUpdate": {
+      "summary": "Golden Ops Consulting — Pro AI Ops Package is in progress — 1/10 tasks complete.",
+      "tasksDone": 1,
+      "tasksTotal": 10,
+      "projectStatus": "<id:in>"
+    }
+  },
+  "salesChain": {
+    "leadCapture": {
+      "leadId": "<id:lead>",
+      "normalizedLead": {
+        "businessName": "Golden Leads HVAC",
+        "contactName": "Casey Kim",
+        "urgency": "high",
+        "source": "<id:in>"
+      }
+    },
+    "businessPain": {
+      "industry": "Home Services",
+      "businessType": "HVAC contractor",
+      "opportunityScore": 70,
+      "painScore": 40,
+      "painPoints": [
+        "Losing business to competitors"
+      ],
+      "recommendedFocus": [
+        "Website foundation",
+        "Lead + follow-up automation",
+        "Internal operations tooling"
+      ]
+    },
+    "offerMatch": {
+      "packageId": "pkg_pro_ai_ops",
+      "packageName": "Pro AI Ops Package",
+      "fitScore": 61,
+      "rationale": "Opportunity score 70/100 and pain score 40/100 (fit 61/100) point to the \"pro\" tier — Pro AI Ops Package."
+    },
+    "proposalGen": {
+      "proposalId": "<id:prop>",
+      "packageName": "Pro AI Ops Package",
+      "scope": {
+        "deliverables": [
+          "Custom web app or internal portal",
+          "AI-assisted customer support / intake workflows",
+          "Internal operations dashboard",
+          "Third-party integrations (CRM, payments, scheduling)"
+        ],
+        "focusAreas": [
+          "Website foundation",
+          "Lead + follow-up automation",
+          "Internal operations tooling"
+        ]
+      },
+      "priceRange": "$9,000 - $18,000",
+      "timelineWeeks": 6,
+      "deliverables": [
+        "Custom web app or internal portal",
+        "AI-assisted customer support / intake workflows",
+        "Internal operations dashboard",
+        "Third-party integrations (CRM, payments, scheduling)"
+      ],
+      "nextStep": "Schedule a same-week call with Casey Kim to walk through the proposal and confirm scope."
+    },
+    "followUp": {
+      "followUpId": "<id:fu>",
+      "dueAt": "<timestamp>",
+      "subject": "Following up on your Golden Leads HVAC proposal",
+      "body": "Hi Casey Kim,\n\nWanted to follow up on the proposal we put together for Golden Leads HVAC (Pro AI Ops Package, $9,000 - $18,000, 6 weeks). Happy to walk through any part of it or answer questions.\n\nSchedule a same-week call with Casey Kim to walk through the proposal and confirm scope.\n\nBest,\nFABLE 5 Team"
+    },
+    "closeProbability": {
+      "score": 63,
+      "breakdown": {
+        "urgency": 25,
+        "budget": 20,
+        "fit": 12,
+        "responsiveness": 0,
+        "painLevel": 6
+      },
+      "summary": "Warm lead — worth continued follow-up."
+    }
+  },
+  "statusTransitions": {
+    "proposal": {
+      "status": "sent",
+      "sent_at": "<timestamp>"
+    },
+    "lead": {
+      "status": "<id:proposal>"
+    },
+    "followUp": {
+      "status": "sent"
+    }
+  },
+  "overseerSnapshot": {
+    "healthScore": 51,
+    "healthLabel": "Watch",
+    "healthComponents": [
+      {
+        "label": "Sales Pipeline",
+        "score": 60,
+        "weight": 0.3,
+        "detail": "0 hot of 1 active leads"
+      },
+      {
+        "label": "Delivery",
+        "score": 10,
+        "weight": 0.3,
+        "detail": "1/10 tasks done, 0 stuck in revision"
+      },
+      {
+        "label": "Revenue",
+        "score": 60,
+        "weight": 0.25,
+        "detail": "Not enough closed leads yet"
+      },
+      {
+        "label": "Responsiveness",
+        "score": 100,
+        "weight": 0.15,
+        "detail": "0 of 0 pending follow-ups overdue"
+      }
+    ],
+    "alertCount": 0,
+    "riskCount": 0,
+    "opportunityCount": 0,
+    "recommendationCount": 1,
+    "forecasts": {
+      "revenue": {
+        "inFlightProjectValue": 13500,
+        "weightedPipelineValue": 8505,
+        "next30DayEstimate": 8302.5,
+        "breakdown": [
+          "$13,500 across 1 in-flight project(s)",
+          "$8,505 weighted pipeline across 1 active proposal(s)"
+        ]
+      },
+      "projects": {
+        "onTrack": 1,
+        "behindSchedule": 0,
+        "nearingDelivery": 0,
+        "items": [
+          {
+            "projectId": "<id:proj>",
+            "name": "Golden Ops Consulting — Pro AI Ops Package",
+            "clientName": "Golden Ops Consulting",
+            "percentDone": 10,
+            "behindSchedule": false
+          }
+        ]
+      },
+      "leads": {
+        "activeLeads": 1,
+        "hotLeads": 0,
+        "warmLeads": 1,
+        "coldOrUnscored": 0,
+        "expectedWinsThisMonth": 0.6
+      },
+      "workload": {
+        "openTasks": 9,
+        "weeklyVelocity": 1,
+        "estDaysToClearBacklog": 63,
+        "staleTaskCount": 0
+      }
+    }
+  }
+}
