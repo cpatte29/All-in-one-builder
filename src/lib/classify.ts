@@ -11,7 +11,7 @@ export interface BusinessClassification {
 
 const INDUSTRY_KEYWORDS: Record<string, string[]> = {
   "Home Services": ["plumb", "hvac", "roof", "electric", "landscap", "clean", "contractor"],
-  "Health & Wellness": ["clinic", "dental", "chiropract", "spa", "salon", "fitness", "gym", "therapy"],
+  "Health & Wellness": ["clinic", "chiropract", "spa", "salon", "fitness", "gym", "therapy"],
   "Restaurant & Food": ["restaurant", "cafe", "bakery", "catering", "food truck", "bar"],
   "Retail & E-commerce": ["shop", "store", "boutique", "ecommerce", "e-commerce", "retail"],
   "Professional Services": ["law", "legal", "accounting", "consult", "financial", "insurance", "realty", "real estate"],

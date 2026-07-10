@@ -75,6 +75,42 @@ export const PACKAGE_CATALOG: PackageDefinition[] = [
     timeline_weeks: 10,
     fitsFor: { minScore: 86, maxScore: 100 },
   },
+  // Vertical packages below are selected by a matched VerticalProfile
+  // (src/lib/verticals/), never by packageForScore() — fitsFor is set to
+  // an unreachable range so score-based selection can never pick them.
+  {
+    id: "pkg_dental_practice",
+    name: "Dental Practice Package",
+    tier: "growth",
+    description:
+      "New-patient conversion website, booking-request capture, and appointment/recall/review automation for a dental practice.",
+    price_range: "$6,000 - $12,000",
+    deliverables: [
+      "Dental practice website (from vertical site template)",
+      "Online booking-request capture",
+      "Appointment reminder automation",
+      "Recall / reactivation sequence",
+      "Post-visit review-request automation",
+      "Local SEO + Google Business Profile setup",
+    ],
+    timeline_weeks: 5,
+    fitsFor: { minScore: -1, maxScore: -1 },
+  },
+  {
+    id: "pkg_dental_care_plan",
+    name: "Dental Care Plan",
+    tier: "starter",
+    description: "Ongoing hosting, content, and automation monitoring for a delivered dental practice site.",
+    price_range: "$300 - $600 / month",
+    deliverables: [
+      "Hosting + monitoring",
+      "Monthly content update",
+      "Automation monitoring + tuning",
+      "Monthly performance report",
+    ],
+    timeline_weeks: 0,
+    fitsFor: { minScore: -1, maxScore: -1 },
+  },
 ];
 
 export function packageForScore(score: number): PackageDefinition {

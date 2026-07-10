@@ -5,7 +5,7 @@ export * from "./types";
 export * from "./registry";
 
 // Production vertical profiles register themselves as a side effect of
-// being imported. This list is intentionally empty until a profile packet
-// lands (Platform Constitution, Article V — No Speculative Build).
-//
-// import "./<profile-module>";
+// being imported (Platform Constitution, Article V — No Speculative
+// Build: dental is the one real vertical; nothing else registers here
+// until a second vertical is a real business decision).
+import "./dental";

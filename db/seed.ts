@@ -86,7 +86,7 @@ function seedFullyDeliveredClient() {
     "maria@riversidefamilydental.com",
     "(555) 234-9981",
     null,
-    "Health & Wellness",
+    "Dental",
     "Dental practice",
     "Small",
     "Fill more new-patient appointment slots and stop losing leads after hours.",
@@ -94,7 +94,7 @@ function seedFullyDeliveredClient() {
     "$4,000 - $8,000",
     "referral",
     JSON.stringify({
-      industry: "Health & Wellness",
+      industry: "Dental",
       businessType: "Dental practice",
       size: "Small",
       opportunityScore: 52,
