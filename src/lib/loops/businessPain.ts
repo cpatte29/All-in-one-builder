@@ -1,7 +1,7 @@
 import { db, nowIso } from "@/lib/db";
 import { executeSalesLoop, logSalesActivity } from "./engine";
 import { classifyBusiness } from "@/lib/classify";
-import { detectProfile } from "@/lib/verticals";
+import { profileForIndustry, type VerticalProfile } from "@/lib/verticals";
 import { getLead } from "./leadCapture";
 
 export interface BusinessPainInput {
@@ -33,17 +33,16 @@ const GENERIC_PAIN_SIGNALS: { pattern: string; label: string; weight: number }[]
 ];
 
 /**
- * Scores pain from raw text. When a vertical profile matches the text, its
- * pain signals are used instead of the generic list — the same
- * "profile owns its own vocabulary" pattern classify.ts uses, applied here
- * because this loop has its own independent pain-detection path (it scores
- * off the CEO's captured words, not classifyBusiness's generic signals).
- * With no profiles registered, detectProfile always returns undefined and
- * this is byte-identical to the pre-engine implementation.
+ * Scores pain from raw text. Takes the profile already resolved by
+ * classifyBusiness's industry detection (broader text: business name,
+ * type, goals, pain points) rather than re-detecting from this narrower
+ * pain/requested-service text — a lead whose only dental signal is in
+ * business_type (e.g. Field Mode's "dental practice" field) still gets
+ * dental pain signals, not a silent fallback to the generic list. With no
+ * profile passed, this is byte-identical to the pre-engine implementation.
  */
-function scorePain(text: string): { painScore: number; painPoints: string[] } {
+function scorePain(text: string, profile?: VerticalProfile): { painScore: number; painPoints: string[] } {
   const haystack = text.toLowerCase();
-  const profile = detectProfile(haystack);
   const signals = profile ? profile.classification.painSignals : GENERIC_PAIN_SIGNALS;
   let score = text.trim().length > 0 ? 20 : 0; // baseline for having any stated pain at all
   const painPoints: string[] = [];
@@ -82,8 +81,10 @@ export function runBusinessPainLoop(input: BusinessPainInput) {
           budgetRange: lead.budget_range ?? undefined,
         });
 
+        const profile = profileForIndustry(classification.industry);
         const { painScore, painPoints } = scorePain(
-          [lead.pain_points, lead.requested_service].filter(Boolean).join(" ")
+          [lead.pain_points, lead.requested_service].filter(Boolean).join(" "),
+          profile
         );
 
         const output: BusinessPainOutput = {
